@@ -18,7 +18,10 @@ namespace Wiring {
          * 16: + intersection.
          */
         public int type;
-        public float signal, signal2;
+        public double signal, signal2;
+
+        #region Constructors
+
         public Tile() {
             type = 0;
             signal = 0;
@@ -31,12 +34,23 @@ namespace Wiring {
             signal2 = t.signal2;
         }
 
-        public void power(int p = 0) {
+        #endregion
+
+        #region Power the tile
+
+        public void power(double p = 0) {
             if(p > signal)
                 signal = p;
+            if(p > signal2)
+                signal2 = p;
+
+            if(signal > 3)
+                signal = 3;
+            if(signal2 > 3)
+                signal2 = 3;
         }
 
-        public void power(int pl = 0,int pu = 0,int pr = 0,int pd = 0) {
+        public void power(double pl = 0,double pu = 0,double pr = 0,double pd = 0) {
             var left = new int[] { 1,5,8,9,10,12,13,15 };
             var up = new int[] { 2,5,6,9,10,11,14,15 };
             var right = new int[] { 3,6,7,10,11,12,13,15 };
@@ -63,13 +77,21 @@ namespace Wiring {
                 if(pd > signal2)
                     signal2 = pd;
             }
+
+            if(signal > 3)
+                signal = 3;
+            if(signal2 > 3)
+                signal2 = 3;
         }
+
+        #endregion
+
         /// <summary>
         /// Returns the signal strength of this particular wire.
         /// </summary>
         /// <param name="dir">The direction that it outputs power. 0 = left, 1 = up, 2 = right, 3 = down.</param>
         /// <returns>Electrical strength here. 0 if not powered, 1 at full.</returns>
-        public float getPower(int dir) {
+        public double getPower(int dir) {
             var left = new int[] { 1,5,8,9,10,12,13,15 };
             var up = new int[] { 2,5,6,9,10,11,14,15 };
             var right = new int[] { 3,6,7,10,11,12,13,15 };
@@ -102,6 +124,7 @@ namespace Wiring {
             }
             return 0;
         }
+
         /// <summary>
         /// Returns if a tile goes a particular direction
         /// </summary>
@@ -133,6 +156,9 @@ namespace Wiring {
             }
             return false;
         }
+
+        #region Modify tile wire connection directions
+
         public void changeDir(int dir,bool add = true) {
             if(add)
                 addDir(dir);
@@ -191,17 +217,23 @@ namespace Wiring {
                     if(downin[x] == type)
                         type = downout[x];
         }
+
+        #endregion
+
         public void reset() {
             signal = 0;
             signal2 = 0;
         }
+
         public void render(Graphics g,int x,int y,int zoomlevel) {
             SolidBrush b = new SolidBrush(Color.FromArgb(63,63,63));
             g.FillRectangle(b,x,y,zoomlevel,zoomlevel);
             b.Color = Color.FromArgb(0,0,0);
             g.FillRectangle(b,x + 1,y + 1,zoomlevel - 2,zoomlevel - 2);
             int baseColor = 127;
-            b.Color = Color.FromArgb((int)(Math.Min(Math.Max(baseColor + signal * (255 - baseColor),0),255)),0,0);
+            b.Color = Color.FromArgb((int)(Math.Min(Math.Max(baseColor + (signal - 0) * (255 - baseColor),0),255)),
+                                     (int)(Math.Min(Math.Max(baseColor + (signal - 1) * (255 - baseColor),0),255)),
+                                     (int)(Math.Min(Math.Max(baseColor + (signal - 2) * (255 - baseColor),0),255)));
             switch(type) {
                 case 1:
                     g.FillRectangle(b,x,y + (int)(zoomlevel / 2 - zoomlevel / 10),zoomlevel / 2 + zoomlevel / 5,zoomlevel / 5);
@@ -273,6 +305,7 @@ namespace Wiring {
                     break;
             }
         }
+
         public void renderNum(Graphics g,int number,int x,int y,int zoomlevel) {
             SolidBrush b = new SolidBrush(Color.FromArgb(255,255,255));
             Font f = new Font("Arial",12);

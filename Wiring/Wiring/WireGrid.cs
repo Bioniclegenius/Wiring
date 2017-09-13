@@ -20,6 +20,7 @@ namespace Wiring {
          */
         private Tile[,] grid;
         private Tile[,] tempgrid;
+        private List<Component> components;
         private Point mouse;
         private Point clickstart;
         private int clickstate;
@@ -33,28 +34,32 @@ namespace Wiring {
             height = 101;
             xcenter = width / 2;
             ycenter = height / 2;
-            zoomlevel = 20;
+            zoomlevel = 40;
             grid = new Tile[width,height];
             tempgrid = new Tile[width,height];
+            components = new List<Component>();
             mouse = new Point(0,0);
             clickstate = 0;
             for(int x = 0;x < width;x++)
                 for(int y = 0;y < height;y++) {
                     grid[x,y] = new Tile();
                 }
+
+            components.Add(new Component(48,48,0,0));
+            components.Add(new Component(45,48,1,0));
+            grid[45,48].power(1);
         }
         public void render(Graphics g,Size sz) {
             SolidBrush b = new SolidBrush(Color.FromArgb(63,63,63));
-            int xoffset = -xcenter * (zoomlevel - 1) - zoomlevel / 2 + sz.Width / 2;
-            int yoffset = -ycenter * (zoomlevel - 1) - zoomlevel / 2 + sz.Height / 2;
-            int leftedge = Math.Max((-zoomlevel - xoffset) / (zoomlevel - 1),0);
-            int rightedge = Math.Min((sz.Width + zoomlevel - xoffset) / (zoomlevel - 1),width - 1);
-            int topedge = Math.Max((-zoomlevel - yoffset) / (zoomlevel - 1),0);
-            int bottomedge = Math.Min((sz.Height + zoomlevel - yoffset) / (zoomlevel - 1),height - 1);
+            Point offset = center(sz);
+            int leftedge = Math.Max((-zoomlevel - offset.X) / (zoomlevel - 1),0);
+            int rightedge = Math.Min((sz.Width + zoomlevel - offset.X) / (zoomlevel - 1),width - 1);
+            int topedge = Math.Max((-zoomlevel - offset.Y) / (zoomlevel - 1),0);
+            int bottomedge = Math.Min((sz.Height + zoomlevel - offset.Y) / (zoomlevel - 1),height - 1);
             if(clickstate == 0) {
                 for(int x = leftedge;x <= rightedge;x++)
                     for(int y = topedge;y <= bottomedge;y++)
-                        grid[x,y].render(g,x * (zoomlevel - 1) + xoffset,y * (zoomlevel - 1) + yoffset,zoomlevel);
+                        grid[x,y].render(g,x * (zoomlevel - 1) + offset.X,y * (zoomlevel - 1) + offset.Y,zoomlevel);
             }
             else {
                 for(int x = 0;x < width;x++)
@@ -94,18 +99,24 @@ namespace Wiring {
                 }
                 for(int x = leftedge;x <= rightedge;x++)
                     for(int y = topedge;y <= bottomedge;y++)
-                        tempgrid[x,y].render(g,x * (zoomlevel - 1) + xoffset,y * (zoomlevel - 1) + yoffset,zoomlevel);
+                        tempgrid[x,y].render(g,x * (zoomlevel - 1) + offset.X,y * (zoomlevel - 1) + offset.Y,zoomlevel);
             }
+            for(int x = 0;x < components.Count();x++) {
+                components[x].render(g,sz,components[x].x*(zoomlevel-1)+offset.X,components[x].y*(zoomlevel-1)+offset.Y,zoomlevel);
+            }
+            for(int x = 0;x < width;x++)
+                for(int y = 0;y < height;y++)
+                    grid[x,y].reset();
+            evaluatePower();
             /*Font f = new Font("Arial",12);
             b.Color = Color.FromArgb(255,255,255);
             g.DrawString(string.Format("{0}",mouse.X),f,b,new PointF(5,5));*/
 
         }
         public void MouseMove(Point p,Size sz) {
-            int xoffset = -xcenter * (zoomlevel - 1) - zoomlevel / 2 + sz.Width / 2;
-            int yoffset = -ycenter * (zoomlevel - 1) - zoomlevel / 2 + sz.Height / 2;
-            p.X -= xoffset;
-            p.Y -= yoffset;
+            Point offset = center(sz);
+            p.X -= offset.X;
+            p.Y -= offset.Y;
             p.X /= zoomlevel - 1;
             p.Y /= zoomlevel - 1;
             p.X = Math.Max(Math.Min(p.X,width - 1),0);
@@ -113,10 +124,9 @@ namespace Wiring {
             mouse = new Point(p.X,p.Y);
         }
         public void MouseClick(Point p,Size sz,bool clickType = true) {
-            int xoffset = -xcenter * (zoomlevel - 1) - zoomlevel / 2 + sz.Width / 2;
-            int yoffset = -ycenter * (zoomlevel - 1) - zoomlevel / 2 + sz.Height / 2;
-            p.X -= xoffset;
-            p.Y -= yoffset;
+            Point offset = center(sz);
+            p.X -= offset.X;
+            p.Y -= offset.Y;
             p.X /= zoomlevel - 1;
             p.Y /= zoomlevel - 1;
             p.X = Math.Max(Math.Min(p.X,width - 1),0);
@@ -139,7 +149,48 @@ namespace Wiring {
                         grid[x,y] = new Tile(tempgrid[x,y]);
             }
         }
+        public Point center(Size sz) {
+            int xoffset = -xcenter * (zoomlevel - 1) - zoomlevel / 2 + sz.Width / 2;
+            int yoffset = -ycenter * (zoomlevel - 1) - zoomlevel / 2 + sz.Height / 2;
+            return new Point(xoffset,yoffset);
+        }
         public void evaluatePower() {
+            for(int x = 0;x < components.Count();x++) {
+                if(components[x].isInput()) {
+                    var outputs=components[x].eval(grid,width,height);
+                    for(int y = 0;y < outputs.Count();y++)
+                        eval(outputs[y].X,outputs[y].Y);
+                }
+            }
+            for(int x = 0;x < components.Count();x++) {
+                if(!components[x].isInput()&&!components[x].isOutput()) {
+                    var outputs = components[x].eval(grid,width,height);
+                    for(int y = 0;y < outputs.Count();y++)
+                        eval(outputs[y].X,outputs[y].Y);
+                }
+            }
+        }
+        public void eval(int x,int y) {
+            if(x > 0)
+                if(grid[x,y].canDir(0) && grid[x - 1,y].getPower(2) < grid[x,y].getPower(0)) {
+                    grid[x - 1,y].power(0,0,grid[x,y].getPower(0),0);
+                    eval(x - 1,y);
+                }
+            if(y > 0)
+                if(grid[x,y].canDir(1) && grid[x,y - 1].getPower(3) < grid[x,y].getPower(1)) {
+                    grid[x,y - 1].power(0,0,0,grid[x,y].getPower(1));
+                    eval(x,y - 1);
+                }
+            if(x < width - 2)
+                if(grid[x,y].canDir(2) && grid[x + 1,y].getPower(0) < grid[x,y].getPower(2)) {
+                    grid[x + 1,y].power(grid[x,y].getPower(2),0,0,0);
+                    eval(x + 1,y);
+                }
+            if(y < height - 2)
+                if(grid[x,y].canDir(3) && grid[x,y+1].getPower(1) < grid[x,y].getPower(3)) {
+                    grid[x,y+1].power(0,grid[x,y].getPower(3),0,0);
+                    eval(x,y+1);
+                }
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 namespace Wiring {
@@ -21,6 +22,8 @@ namespace Wiring {
             long time = st.ElapsedMilliseconds - lasttime;
             lasttime += time;
             Graphics g = e.Graphics;
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+            g.PixelOffsetMode = PixelOffsetMode.None;
             SolidBrush b = new SolidBrush(Color.FromArgb(0,0,0));
             g.FillRectangle(b,0,0,Size.Width,Size.Height);
 
