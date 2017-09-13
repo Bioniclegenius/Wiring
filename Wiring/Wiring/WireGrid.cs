@@ -29,6 +29,7 @@ namespace Wiring {
         public int zoomlevel;
         public int xcenter;
         public int ycenter;
+
         public WireGrid() {
             width = 101;
             height = 101;
@@ -45,10 +46,12 @@ namespace Wiring {
                     grid[x,y] = new Tile();
                 }
 
-            components.Add(new Component(48,48,0,0));
-            components.Add(new Component(45,48,1,0));
-            grid[45,48].power(1);
+            components.Add(new Component(new Point(width,height),48,48,4,0));
+            components.Add(new Component(new Point(width,height),45,47,1,0));
+            components.Add(new Component(new Point(width,height),45,48,2,0));
+            components.Add(new Component(new Point(width,height),45,49,3,0));
         }
+
         public void render(Graphics g,Size sz) {
             SolidBrush b = new SolidBrush(Color.FromArgb(63,63,63));
             Point offset = center(sz);
@@ -108,11 +111,15 @@ namespace Wiring {
                 for(int y = 0;y < height;y++)
                     grid[x,y].reset();
             evaluatePower();
+            //grid[mouse.X,mouse.Y].renderNum(g,grid[mouse.X,mouse.Y].getPower(),mouse.X * (zoomlevel - 1) + offset.X,mouse.Y * (zoomlevel - 1) + offset.Y,zoomlevel);
             /*Font f = new Font("Arial",12);
             b.Color = Color.FromArgb(255,255,255);
             g.DrawString(string.Format("{0}",mouse.X),f,b,new PointF(5,5));*/
 
         }
+
+        #region Mouse events
+
         public void MouseMove(Point p,Size sz) {
             Point offset = center(sz);
             p.X -= offset.X;
@@ -154,6 +161,11 @@ namespace Wiring {
             int yoffset = -ycenter * (zoomlevel - 1) - zoomlevel / 2 + sz.Height / 2;
             return new Point(xoffset,yoffset);
         }
+
+        #endregion
+
+        #region Power evaluation
+
         public void evaluatePower() {
             for(int x = 0;x < components.Count();x++) {
                 if(components[x].isInput()) {
@@ -192,5 +204,8 @@ namespace Wiring {
                     eval(x,y+1);
                 }
         }
+
+        #endregion
+
     }
 }

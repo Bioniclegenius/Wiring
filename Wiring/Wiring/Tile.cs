@@ -86,6 +86,8 @@ namespace Wiring {
 
         #endregion
 
+        #region Get power
+
         /// <summary>
         /// Returns the signal strength of this particular wire.
         /// </summary>
@@ -124,6 +126,14 @@ namespace Wiring {
             }
             return 0;
         }
+
+        public double getPower() {
+            if(signal >= signal2)
+                return signal;
+            return signal2;
+        }
+
+        #endregion
 
         /// <summary>
         /// Returns if a tile goes a particular direction
@@ -231,9 +241,9 @@ namespace Wiring {
             b.Color = Color.FromArgb(0,0,0);
             g.FillRectangle(b,x + 1,y + 1,zoomlevel - 2,zoomlevel - 2);
             int baseColor = 127;
-            b.Color = Color.FromArgb((int)(Math.Min(Math.Max(baseColor + (signal - 0) * (255 - baseColor),0),255)),
-                                     (int)(Math.Min(Math.Max(baseColor + (signal - 1) * (255 - baseColor),0),255)),
-                                     (int)(Math.Min(Math.Max(baseColor + (signal - 2) * (255 - baseColor),0),255)));
+            b.Color = Color.FromArgb((int)(Math.Min(Math.Max(baseColor + signal * (255 - baseColor),0),255)),
+                                     (int)(Math.Min(Math.Max((signal - 1) * 255,0),255)),
+                                     (int)(Math.Min(Math.Max((signal - 2) * 255,0),255)));
             switch(type) {
                 case 1:
                     g.FillRectangle(b,x,y + (int)(zoomlevel / 2 - zoomlevel / 10),zoomlevel / 2 + zoomlevel / 5,zoomlevel / 5);
@@ -269,19 +279,19 @@ namespace Wiring {
                     break;
                 case 9:
                     g.FillRectangle(b,x + (int)(zoomlevel / 2 - zoomlevel / 10),y,zoomlevel / 5,zoomlevel);
-                    g.FillRectangle(b,x,y + (int)(zoomlevel / 2 - zoomlevel / 10),zoomlevel / 2 + zoomlevel / 5,zoomlevel / 5);
+                    g.FillRectangle(b,x,y + (int)(zoomlevel / 2 - zoomlevel / 10),zoomlevel / 2,zoomlevel / 5);
                     break;
                 case 10:
                     g.FillRectangle(b,x,y + (int)(zoomlevel / 2 - zoomlevel / 10),zoomlevel,zoomlevel / 5);
-                    g.FillRectangle(b,x + (int)(zoomlevel / 2 - zoomlevel / 10),y,zoomlevel / 5,zoomlevel / 2 + zoomlevel / 5);
+                    g.FillRectangle(b,x + (int)(zoomlevel / 2 - zoomlevel / 10),y,zoomlevel / 5,zoomlevel / 2);
                     break;
                 case 11:
                     g.FillRectangle(b,x + (int)(zoomlevel / 2 - zoomlevel / 10),y,zoomlevel / 5,zoomlevel);
-                    g.FillRectangle(b,x + (int)(zoomlevel / 2 - zoomlevel / 5),y + (int)(zoomlevel / 2 - zoomlevel / 10),zoomlevel / 2 + zoomlevel / 5,zoomlevel / 5);
+                    g.FillRectangle(b,x + (int)(zoomlevel / 2),y + (int)(zoomlevel / 2 - zoomlevel / 10),zoomlevel / 2,zoomlevel / 5);
                     break;
                 case 12:
                     g.FillRectangle(b,x,y + (int)(zoomlevel / 2 - zoomlevel / 10),zoomlevel,zoomlevel / 5);
-                    g.FillRectangle(b,x + (int)(zoomlevel / 2 - zoomlevel / 10),y + (int)(zoomlevel / 2 - zoomlevel / 5),zoomlevel / 5,zoomlevel / 2 + zoomlevel / 5);
+                    g.FillRectangle(b,x + (int)(zoomlevel / 2 - zoomlevel / 10),y + (int)(zoomlevel / 2),zoomlevel / 5,zoomlevel / 2);
                     break;
                 case 13:
                     g.FillRectangle(b,x,y + (int)(zoomlevel / 2 - zoomlevel / 10),zoomlevel,zoomlevel / 5);
@@ -306,13 +316,11 @@ namespace Wiring {
             }
         }
 
-        public void renderNum(Graphics g,int number,int x,int y,int zoomlevel) {
+        public void renderNum(Graphics g,double number,int x,int y,int zoomlevel) {
             SolidBrush b = new SolidBrush(Color.FromArgb(255,255,255));
             Font f = new Font("Arial",12);
             b.Color = Color.FromArgb(255,255,255);
             g.DrawString(string.Format("{0}",number),f,b,new PointF(x,y));
-            b.Color = Color.FromArgb(0,255,255);
-            g.FillRectangle(b,x,y,zoomlevel,zoomlevel);
         }
     }
 }
