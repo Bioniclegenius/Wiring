@@ -46,10 +46,10 @@ namespace Wiring {
                     grid[x,y] = new Tile();
                 }
 
-            components.Add(new Component(new Point(width,height),48,48,4,0));
-            components.Add(new Component(new Point(width,height),45,47,1,0));
-            components.Add(new Component(new Point(width,height),45,48,2,0));
-            components.Add(new Component(new Point(width,height),45,49,3,0));
+            components.Add(new Component(new Point(width,height),width,height,48,48,5,3));
+            components.Add(new Component(new Point(width,height),width,height,45,47,1,0));
+            components.Add(new Component(new Point(width,height),width,height,45,48,2,0));
+            components.Add(new Component(new Point(width,height),width,height,45,49,3,0));
         }
 
         public void render(Graphics g,Size sz) {

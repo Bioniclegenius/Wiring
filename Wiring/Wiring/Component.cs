@@ -12,7 +12,7 @@ namespace Wiring {
         public int x, y;
         private Point size;
 
-        public Component(Point p,int xi = 0,int yi = 0,int t = 0,int orientation = 0) {
+        public Component(Point p,int width,int height,int xi = 0,int yi = 0,int t = 0,int orientation = 0) {
             x = xi;
             y = yi;
             if(x < 0)
@@ -28,13 +28,18 @@ namespace Wiring {
                 case 0://diode
                     size = new Point((dir == 0 || dir == 2 ? 2 : 1),(dir == 1 || dir == 3 ? 2 : 1));
                     break;
-                case 4://or gate
+                case 4://or/and gate
+                case 5:
                     size = new Point(2,2);
                     break;
                 default:
                     size = new Point(1,1);
                     break;
             }
+            if(x + size.X >= width)
+                x = width - size.X - 1;
+            if(y + size.Y >= height)
+                y = height - size.Y - 1;
             dir = orientation % 4;//0 = right, 1 = down, 2 = left, 3 = up - in 0, inputs on left, outputs on right
         }
 
@@ -73,37 +78,49 @@ namespace Wiring {
                 case 4:
                     switch(dir) {
                         case 1://down
-                            if(x < width - 2 && y < height - 2) {
-                                grid[x + 1,y + 1].power(grid[x,y].getPower());
-                                grid[x + 1,y + 1].power(grid[x + 1,y].getPower());
-                                outputs.Add(new Point(x + 1,y + 1));
-                            }
+                            grid[x + 1,y + 1].power(Math.Max(grid[x,y].getPower(),grid[x + 1,y].getPower()));
+                            outputs.Add(new Point(x + 1,y + 1));
                             break;
                         case 2://left
-                            if(x < width - 2 && y < height - 2) {
-                                grid[x,y + 1].power(grid[x + 1,y].getPower());
-                                grid[x,y + 1].power(grid[x + 1,y + 1].getPower());
-                                outputs.Add(new Point(x,y + 1));
-                            }
+                            grid[x,y + 1].power(Math.Max(grid[x + 1,y].getPower(),grid[x + 1,y + 1].getPower()));
+                            outputs.Add(new Point(x,y + 1));
                             break;
                         case 3://up
-                            if(y < height - 2) {
-                                grid[x,y].power(grid[x,y + 1].getPower());
-                                if(x < width - 2)
-                                    grid[x,y].power(grid[x + 1,y + 1].getPower());
-                                outputs.Add(new Point(x,y));
-                            }
+                            grid[x,y].power(Math.Max(grid[x,y + 1].getPower(),grid[x + 1,y + 1].getPower()));
+                            outputs.Add(new Point(x,y));
                             break;
                         default://right
-                            if(x < width - 2) {
-                                grid[x + 1,y].power(grid[x,y].getPower());
-                                if(y < height - 2)
-                                    grid[x + 1,y].power(grid[x,y + 1].getPower());
-                                outputs.Add(new Point(x + 1,y));
-                            }
+                            grid[x + 1,y].power(Math.Max(grid[x,y].getPower(),grid[x,y + 1].getPower()));
+                            outputs.Add(new Point(x + 1,y));
                             break;
                     }
                     break;
+
+                #endregion
+
+                #region And gate
+
+                case 5:
+                    switch(dir) {
+                        case 1://down
+                            grid[x + 1,y + 1].power(Math.Min(grid[x,y].getPower(),grid[x + 1,y].getPower()));
+                            outputs.Add(new Point(x + 1,y + 1));
+                            break;
+                        case 2://left
+                            grid[x,y + 1].power(Math.Min(grid[x + 1,y].getPower(),grid[x + 1,y + 1].getPower()));
+                            outputs.Add(new Point(x,y + 1));
+                            break;
+                        case 3://up
+                            grid[x,y].power(Math.Min(grid[x,y + 1].getPower(),grid[x + 1,y + 1].getPower()));
+                            outputs.Add(new Point(x,y));
+                            break;
+                        default://right
+                            grid[x + 1,y].power(Math.Min(grid[x,y].getPower(),grid[x,y + 1].getPower()));
+                            outputs.Add(new Point(x + 1,y));
+                            break;
+                    }
+                    break;
+
                 #endregion
 
                 #region Diode/default
@@ -111,28 +128,20 @@ namespace Wiring {
                 default:
                     switch(dir) {
                         case 1://down
-                            if(y < height - 2) {
-                                grid[x,y + 1].power(grid[x,y].getPower());
-                                outputs.Add(new Point(x,y + 1));
-                            }
+                            grid[x,y + 1].power(grid[x,y].getPower());
+                            outputs.Add(new Point(x,y + 1));
                             break;
                         case 2://left
-                            if(x < width - 2) {
-                                grid[x,y].power(grid[x + 1,y].getPower());
-                                outputs.Add(new Point(x,y));
-                            }
+                            grid[x,y].power(grid[x + 1,y].getPower());
+                            outputs.Add(new Point(x,y));
                             break;
                         case 3://up
-                            if(y < height - 2) {
-                                grid[x,y].power(grid[x,y + 1].getPower());
-                                outputs.Add(new Point(x,y));
-                            }
+                            grid[x,y].power(grid[x,y + 1].getPower());
+                            outputs.Add(new Point(x,y));
                             break;
                         default://right
-                            if(x < width - 2) {
-                                grid[x + 1,y].power(grid[x,y].getPower());
-                                outputs.Add(new Point(x + 1,y));
-                            }
+                            grid[x + 1,y].power(grid[x,y].getPower());
+                            outputs.Add(new Point(x + 1,y));
                             break;
                     }
                     break;
@@ -169,17 +178,7 @@ namespace Wiring {
             Bitmap image;
             try {
                 switch(type) {
-                    case 1://power supply, power level 1
-                    case 2://power supply, power level 2
-                    case 3://power supply, power level 3
-                        image = (Bitmap)Image.FromFile(string.Format("images\\Power{0}.png",type));
-                        g.DrawImage(image,new RectangleF(scrx,scry,zoomlevel,zoomlevel));
-                        break;
-                    case 4://or gate
-                        image = (Bitmap)Image.FromFile("images\\Or.png");
-                        g.DrawImage(image,new RectangleF(scrx,scry,zoomlevel * 2,zoomlevel * 2),new RectangleF(zoomlevel * 2 * (dir % 2),(dir < 2 ? 0 : 80),80,80),GraphicsUnit.Pixel);
-                        break;
-                    default://diode
+                    case 0://diode
                         image = (Bitmap)Image.FromFile("images\\Diode.png");
                         switch(dir) {
                             case 0:
@@ -192,18 +191,27 @@ namespace Wiring {
                                 break;
                         }
                         break;
+                    case 1://power supply, power level 1
+                    case 2://power supply, power level 2
+                    case 3://power supply, power level 3
+                        image = (Bitmap)Image.FromFile(string.Format("images\\Power{0}.png",type));
+                        g.DrawImage(image,new RectangleF(scrx,scry,zoomlevel,zoomlevel));
+                        break;
+                    case 4://or gate
+                        image = (Bitmap)Image.FromFile("images\\Or.png");
+                        g.DrawImage(image,new RectangleF(scrx,scry,zoomlevel * 2,zoomlevel * 2),new RectangleF(zoomlevel * 2 * (dir % 2),(dir < 2 ? 0 : 80),80,80),GraphicsUnit.Pixel);
+                        break;
+                    case 5://and gate
+                        image = (Bitmap)Image.FromFile("images\\And.png");
+                        g.DrawImage(image,new RectangleF(scrx,scry,zoomlevel * 2,zoomlevel * 2),new RectangleF(zoomlevel * 2 * (dir % 2),(dir < 2 ? 0 : 80),80,80),GraphicsUnit.Pixel);
+                        break;
+                    default:
+                        throw new Exception();
                 }
             }
             catch(Exception) {
                 SolidBrush b = new SolidBrush(Color.FromArgb(0,255,255));
-                switch(type) {
-                    case 1:
-                        g.FillRectangle(b,scrx + 1,scry + 1,zoomlevel - 2,zoomlevel - 2);
-                        break;
-                    default:
-                        g.FillRectangle(b,scrx + 1,scry + 1,zoomlevel * (dir == 0 || dir == 2 ? 2 : 1) - 2,zoomlevel * (dir == 0 || dir == 2 ? 1 : 2) - 2);
-                        break;
-                }
+                g.FillRectangle(b,scrx + 1,scry + 1,zoomlevel * size.X - 2,zoomlevel * size.Y - 2);
             }
         }
     }
