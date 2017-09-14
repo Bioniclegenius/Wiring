@@ -19,6 +19,7 @@ namespace Wiring {
          */
         public int type;
         public double signal, signal2;
+        public static int baseColor = 127;
 
         #region Constructors
 
@@ -177,25 +178,25 @@ namespace Wiring {
         }
         public void addDir(int dir) {
             var leftin = new int[] { 0,2,3,4,6,7,11,14 };
-            var leftout = new int[] { 1,5,13,8,10,12,15,9 };
+            var leftout = new int[] { 1,5,13,8,10,12,16,9 };
             if(dir == 0)
                 for(int x = 0;x < 8;x++)
                     if(leftin[x] == type)
                         type = leftout[x];
             var upin = new int[] { 0,1,3,4,7,8,12,13 };
-            var upout = new int[] { 2,5,6,14,11,9,15,10 };
+            var upout = new int[] { 2,5,6,14,11,9,16,10 };
             if(dir == 1)
                 for(int x = 0;x < 8;x++)
                     if(upin[x] == type)
                         type = upout[x];
             var rightin = new int[] { 0,1,2,4,5,8,9,14 };
-            var rightout = new int[] { 3,13,6,7,10,12,15,11 };
+            var rightout = new int[] { 3,13,6,7,10,12,16,11 };
             if(dir == 2)
                 for(int x = 0;x < 8;x++)
                     if(rightin[x] == type)
                         type = rightout[x];
             var downin = new int[] { 0,1,2,3,5,6,10,13 };
-            var downout = new int[] { 4,8,14,7,9,11,15,12 };
+            var downout = new int[] { 4,8,14,7,9,11,16,12 };
             if(dir == 3)
                 for(int x = 0;x < 8;x++)
                     if(downin[x] == type)
@@ -240,7 +241,6 @@ namespace Wiring {
             g.FillRectangle(b,x,y,zoomlevel,zoomlevel);
             b.Color = Color.FromArgb(0,0,0);
             g.FillRectangle(b,x + 1,y + 1,zoomlevel - 2,zoomlevel - 2);
-            int baseColor = 127;
             b.Color = Color.FromArgb((int)(Math.Min(Math.Max(baseColor + signal * (255 - baseColor),0),255)),
                                      (int)(Math.Min(Math.Max((signal - 1) * 255,0),255)),
                                      (int)(Math.Min(Math.Max((signal - 2) * 255,0),255)));

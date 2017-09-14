@@ -21,11 +21,15 @@ namespace Wiring {
         private Tile[,] grid;
         private Tile[,] tempgrid;
         private List<Component> components;
+        private List<Component> workbenchComponents;
+        private List<int> componentsToCheck;
+        private Component tempComponent;
         private Point mouse;
         private Point clickstart;
         private int clickstate;
-        private int width;
-        private int height;
+        public int workbenchWidth;
+        public int width;
+        public int height;
         public int zoomlevel;
         public int xcenter;
         public int ycenter;
@@ -39,6 +43,10 @@ namespace Wiring {
             grid = new Tile[width,height];
             tempgrid = new Tile[width,height];
             components = new List<Component>();
+            workbenchComponents = new List<Component>();
+            componentsToCheck = new List<int>();
+            tempComponent = new Component(0,0,0,0,-1,0);
+            workbenchWidth = 190;
             mouse = new Point(0,0);
             clickstate = 0;
             for(int x = 0;x < width;x++)
@@ -46,11 +54,17 @@ namespace Wiring {
                     grid[x,y] = new Tile();
                 }
 
-            components.Add(new Component(new Point(width,height),width,height,48,48,5,3));
-            components.Add(new Component(new Point(width,height),width,height,45,47,1,0));
-            components.Add(new Component(new Point(width,height),width,height,45,48,2,0));
-            components.Add(new Component(new Point(width,height),width,height,45,49,3,0));
+            //Setting up the workbench
+            for(int x = 0;x < 9;x++)
+                workbenchComponents.Add(new Component(0,0,0,0,x,0));
+            
+            components.Add(new Component(width,height,48,48,0,2));
+            components.Add(new Component(width,height,45,47,1,0));
+            components.Add(new Component(width,height,45,48,2,0));
+            components.Add(new Component(width,height,45,49,3,0));
         }
+
+        #region Renders
 
         public void render(Graphics g,Size sz) {
             SolidBrush b = new SolidBrush(Color.FromArgb(63,63,63));
@@ -59,19 +73,19 @@ namespace Wiring {
             int rightedge = Math.Min((sz.Width + zoomlevel - offset.X) / (zoomlevel - 1),width - 1);
             int topedge = Math.Max((-zoomlevel - offset.Y) / (zoomlevel - 1),0);
             int bottomedge = Math.Min((sz.Height + zoomlevel - offset.Y) / (zoomlevel - 1),height - 1);
-            if(clickstate == 0) {
+            if(clickstate !=1&&clickstate!=2) {
                 for(int x = leftedge;x <= rightedge;x++)
                     for(int y = topedge;y <= bottomedge;y++)
                         grid[x,y].render(g,x * (zoomlevel - 1) + offset.X,y * (zoomlevel - 1) + offset.Y,zoomlevel);
             }
-            else {
+            else if(clickstate < 3) {
                 for(int x = 0;x < width;x++)
                     for(int y = 0;y < height;y++)
                         tempgrid[x,y] = new Tile(grid[x,y]);
                 if(mouse.X > clickstart.X) {
                     tempgrid[clickstart.X,clickstart.Y].changeDir(2,clickstate == 1);
                     for(int x = clickstart.X + 1;x <= mouse.X;x++) {
-                        tempgrid[x,clickstart.Y].changeDir(0,clickstate==1);
+                        tempgrid[x,clickstart.Y].changeDir(0,clickstate == 1);
                         if(x < mouse.X)
                             tempgrid[x,clickstart.Y].changeDir(2,clickstate == 1);
                     }
@@ -105,18 +119,39 @@ namespace Wiring {
                         tempgrid[x,y].render(g,x * (zoomlevel - 1) + offset.X,y * (zoomlevel - 1) + offset.Y,zoomlevel);
             }
             for(int x = 0;x < components.Count();x++) {
-                components[x].render(g,sz,components[x].x*(zoomlevel-1)+offset.X,components[x].y*(zoomlevel-1)+offset.Y,zoomlevel);
+                components[x].render(g,sz,components[x].x * (zoomlevel - 1) + offset.X,components[x].y * (zoomlevel - 1) + offset.Y,zoomlevel);
             }
             for(int x = 0;x < width;x++)
                 for(int y = 0;y < height;y++)
                     grid[x,y].reset();
+            for(int x = 0;x < components.Count();x++)
+                components[x].Touched = false;
+            tempComponent.x = mouse.X;
+            tempComponent.y = mouse.Y;
+            if(tempComponent.type >= 0&&clickstate==3)
+                tempComponent.render(g,sz,mouse.X * (zoomlevel - 1) + offset.X,mouse.Y * (zoomlevel - 1) + offset.Y,zoomlevel);
             evaluatePower();
-            //grid[mouse.X,mouse.Y].renderNum(g,grid[mouse.X,mouse.Y].getPower(),mouse.X * (zoomlevel - 1) + offset.X,mouse.Y * (zoomlevel - 1) + offset.Y,zoomlevel);
-            /*Font f = new Font("Arial",12);
+            renderWorkbench(g,sz);
+            /*grid[mouse.X,mouse.Y].renderNum(g,grid[mouse.X,mouse.Y].getPower(),mouse.X * (zoomlevel - 1) + offset.X,mouse.Y * (zoomlevel - 1) + offset.Y,zoomlevel);
+            Font f = new Font("Arial",12);
             b.Color = Color.FromArgb(255,255,255);
+            for(int x = leftedge;x < rightedge;x++)
+                for(int y = topedge;y < bottomedge;y++)
+                    grid[x,y].renderNum(g,grid[x,y].getPower(),x * (zoomlevel - 1) + offset.X,y * (zoomlevel - 1) + offset.Y,zoomlevel);
             g.DrawString(string.Format("{0}",mouse.X),f,b,new PointF(5,5));*/
 
         }
+
+        private void renderWorkbench(Graphics g,Size sz) {
+            SolidBrush b = new SolidBrush(Color.FromArgb(63,63,63));
+            g.FillRectangle(b,0,0,workbenchWidth + 1,sz.Height);
+            b.Color = Color.FromArgb(0,0,0);
+            g.FillRectangle(b,0,0,workbenchWidth,sz.Height);
+            for(int x = 0;x < workbenchComponents.Count();x++)
+                workbenchComponents[x].render(g,sz,5 + 45 * (x % 4),60 + 45 * (int)(x / 4),20);
+        }
+
+        #endregion
 
         #region Mouse events
 
@@ -130,8 +165,10 @@ namespace Wiring {
             p.Y = Math.Max(Math.Min(p.Y,height - 1),0);
             mouse = new Point(p.X,p.Y);
         }
-        public void MouseClick(Point p,Size sz,bool clickType = true) {
+
+        public void MouseClick(Point p,Size sz,int clickType) {
             Point offset = center(sz);
+            Point orig = new Point(p.X,p.Y);
             p.X -= offset.X;
             p.Y -= offset.Y;
             p.X /= zoomlevel - 1;
@@ -139,25 +176,66 @@ namespace Wiring {
             p.X = Math.Max(Math.Min(p.X,width - 1),0);
             p.Y = Math.Max(Math.Min(p.Y,height - 1),0);
             mouse = new Point(p.X,p.Y);
-            if(clickstate == 0 && grid[p.X,p.Y].type < 15) {
-                if(clickType)
-                    clickstate = 1;
-                else
-                    clickstate = 2;
-                clickstart = new Point(p.X,p.Y);
-            }
-            else if(clickstate == 0) {
-                grid[p.X,p.Y].type = 1 - (grid[p.X,p.Y].type - 15) + 15;
+            if(orig.X > workbenchWidth) {
+                int comp = -1;
+                if(clickstate == 0) {
+                    for(int x = 0;x < components.Count();x++)
+                        if(p.X >= components[x].x && p.X < components[x].x + components[x].size.X &&
+                            p.Y >= components[x].y && p.Y < components[x].y + components[x].size.Y) {
+                            if(clickType == 0 && components[x].isClickable())
+                                comp = x;
+                            else if(clickType == 1) {
+                                components.RemoveAt(x);
+                                x--;
+                                clickType = -1;
+                            }
+                        }
+
+                }
+                if(clickstate == 0 && comp >= 0) {
+                    components[comp].click();
+                }
+                else if(clickstate == 0 && grid[p.X,p.Y].type < 15) {
+                    if(clickType == 0)
+                        clickstate = 1;
+                    else if(clickType == 1)
+                        clickstate = 2;
+                    clickstart = new Point(p.X,p.Y);
+                }
+                else if(clickstate == 0) {
+                    grid[p.X,p.Y].type = 1 - (grid[p.X,p.Y].type - 15) + 15;
+                }
+                else if(clickstate == 3) {
+                    if(clickType==0)
+                        components.Add(new Component(width,height,mouse.X,mouse.Y,tempComponent.type,0));
+                    tempComponent.type = -1;
+                    clickstate = 0;
+                }
+                else {
+                    clickstate = 0;
+                    for(int x = 0;x < width;x++)
+                        for(int y = 0;y < height;y++)
+                            grid[x,y] = new Tile(tempgrid[x,y]);
+                }
             }
             else {
-                clickstate = 0;
-                for(int x = 0;x < width;x++)
-                    for(int y = 0;y < height;y++)
-                        grid[x,y] = new Tile(tempgrid[x,y]);
+                if(clickstate == 0) {
+                    for(int x = 0;x < workbenchComponents.Count();x++) {
+                        int compX = 5 + 45 * (x % 4);
+                        int compY = 60 + 45 * (int)(x / 4);
+                        Point size = workbenchComponents[x].size;
+                        if(orig.X >= compX && orig.X < compX + size.X * 20 && orig.Y >= compY && orig.Y < compY + size.Y * 20) {
+                            tempComponent = new Component(0,0,0,0,workbenchComponents[x].type,0);
+                            clickstate = 3;
+                            break;
+                        }
+                    }
+                }
             }
         }
+
         public Point center(Size sz) {
-            int xoffset = -xcenter * (zoomlevel - 1) - zoomlevel / 2 + sz.Width / 2;
+            int xoffset = -xcenter * (zoomlevel - 1) - zoomlevel / 2 + (sz.Width - workbenchWidth) / 2 + workbenchWidth;
             int yoffset = -ycenter * (zoomlevel - 1) - zoomlevel / 2 + sz.Height / 2;
             return new Point(xoffset,yoffset);
         }
@@ -168,21 +246,32 @@ namespace Wiring {
 
         public void evaluatePower() {
             for(int x = 0;x < components.Count();x++) {
+                components[x].clip(grid,width,height);
                 if(components[x].isInput()) {
-                    var outputs=components[x].eval(grid,width,height);
-                    for(int y = 0;y < outputs.Count();y++)
-                        eval(outputs[y].X,outputs[y].Y);
-                }
-            }
-            for(int x = 0;x < components.Count();x++) {
-                if(!components[x].isInput()&&!components[x].isOutput()) {
                     var outputs = components[x].eval(grid,width,height);
                     for(int y = 0;y < outputs.Count();y++)
                         eval(outputs[y].X,outputs[y].Y);
                 }
+                if(components[x].type == 6)
+                    componentsToCheck.Add(x);
             }
+            while(componentsToCheck.Count() > 0) {
+                var outputs = components[componentsToCheck[0]].eval(grid,width,height);
+                for(int x = 0;x < outputs.Count();x++)
+                    eval(outputs[x].X,outputs[x].Y);
+                componentsToCheck.RemoveAt(0);
+            }
+            for(int x = 0;x < components.Count();x++)
+                if(components[x].isOutput())
+                    components[x].eval(grid,width,height);
         }
+
         public void eval(int x,int y) {
+            for(int z = 0;z < components.Count();z++)
+                if(x >= components[z].x && x < components[z].x + components[z].size.X &&
+                   y >= components[z].y && y < components[z].y + components[z].size.Y &&
+                   !components[z].Touched)
+                    componentsToCheck.Add(z);
             if(x > 0)
                 if(grid[x,y].canDir(0) && grid[x - 1,y].getPower(2) < grid[x,y].getPower(0)) {
                     grid[x - 1,y].power(0,0,grid[x,y].getPower(0),0);
@@ -199,10 +288,44 @@ namespace Wiring {
                     eval(x + 1,y);
                 }
             if(y < height - 2)
-                if(grid[x,y].canDir(3) && grid[x,y+1].getPower(1) < grid[x,y].getPower(3)) {
-                    grid[x,y+1].power(0,grid[x,y].getPower(3),0,0);
-                    eval(x,y+1);
+                if(grid[x,y].canDir(3) && grid[x,y + 1].getPower(1) < grid[x,y].getPower(3)) {
+                    grid[x,y + 1].power(0,grid[x,y].getPower(3),0,0);
+                    eval(x,y + 1);
                 }
+        }
+
+        #endregion
+
+        #region Scrolls
+
+        public void vScroll(int val) {
+            ycenter += val;
+            if(ycenter < 0)
+                ycenter = 0;
+            if(ycenter > height - 1)
+                ycenter = height - 1;
+        }
+
+        public void hScroll(int val) {
+            xcenter += val;
+            if(xcenter < 0)
+                xcenter = 0;
+            if(xcenter > width - 1)
+                xcenter = width - 1;
+        }
+
+        #endregion
+
+        #region Zooms
+
+        public void zoomIn() {
+            if(zoomlevel < 80)
+                zoomlevel += 10;
+        }
+
+        public void zoomOut() {
+            if(zoomlevel > 10)
+                zoomlevel -= 10;
         }
 
         #endregion

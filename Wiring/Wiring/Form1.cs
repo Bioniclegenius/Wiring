@@ -21,8 +21,11 @@ namespace Wiring
         private void Form1_Load(object sender, EventArgs e)
         {
             ClientSize = new Size(800, 600);
-            rp = new RenderPanel(Size);
+            rp = new RenderPanel(ClientSize);
             Controls.Add(rp);
+            BeginInvoke((MethodInvoker)delegate {
+                rp.init();
+            });
         }
     }
 }
