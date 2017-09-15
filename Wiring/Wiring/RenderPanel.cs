@@ -85,7 +85,7 @@ namespace Wiring {
             SolidBrush b = new SolidBrush(Color.FromArgb(0,0,0));
             g.FillRectangle(b,0,0,Size.Width,Size.Height);
 
-            blueprint.render(g,Size);
+            blueprint.render(g,Size,time);
 
             Invalidate();
         }

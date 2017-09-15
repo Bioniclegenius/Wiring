@@ -50,30 +50,24 @@ namespace Wiring {
             mouse = new Point(0,0);
             clickstate = 0;
             for(int x = 0;x < width;x++)
-                for(int y = 0;y < height;y++) {
+                for(int y = 0;y < height;y++)
                     grid[x,y] = new Tile();
-                }
 
             //Setting up the workbench
-            for(int x = 0;x < 9;x++)
+            for(int x = 0;x <= ComponentTypes.numTypes;x++)
                 workbenchComponents.Add(new Component(0,0,0,0,x,0));
-            
-            components.Add(new Component(width,height,48,48,0,2));
-            components.Add(new Component(width,height,45,47,1,0));
-            components.Add(new Component(width,height,45,48,2,0));
-            components.Add(new Component(width,height,45,49,3,0));
         }
 
         #region Renders
 
-        public void render(Graphics g,Size sz) {
+        public void render(Graphics g,Size sz,long time) {
             SolidBrush b = new SolidBrush(Color.FromArgb(63,63,63));
             Point offset = center(sz);
             int leftedge = Math.Max((-zoomlevel - offset.X) / (zoomlevel - 1),0);
             int rightedge = Math.Min((sz.Width + zoomlevel - offset.X) / (zoomlevel - 1),width - 1);
             int topedge = Math.Max((-zoomlevel - offset.Y) / (zoomlevel - 1),0);
             int bottomedge = Math.Min((sz.Height + zoomlevel - offset.Y) / (zoomlevel - 1),height - 1);
-            if(clickstate !=1&&clickstate!=2) {
+            if(clickstate != 1 && clickstate != 2) {
                 for(int x = leftedge;x <= rightedge;x++)
                     for(int y = topedge;y <= bottomedge;y++)
                         grid[x,y].render(g,x * (zoomlevel - 1) + offset.X,y * (zoomlevel - 1) + offset.Y,zoomlevel);
@@ -124,21 +118,17 @@ namespace Wiring {
             for(int x = 0;x < width;x++)
                 for(int y = 0;y < height;y++)
                     grid[x,y].reset();
-            for(int x = 0;x < components.Count();x++)
-                components[x].Touched = false;
             tempComponent.x = mouse.X;
             tempComponent.y = mouse.Y;
-            if(tempComponent.type >= 0&&clickstate==3)
+            if(tempComponent.type >= 0 && clickstate == 3)
                 tempComponent.render(g,sz,mouse.X * (zoomlevel - 1) + offset.X,mouse.Y * (zoomlevel - 1) + offset.Y,zoomlevel);
             evaluatePower();
             renderWorkbench(g,sz);
-            /*grid[mouse.X,mouse.Y].renderNum(g,grid[mouse.X,mouse.Y].getPower(),mouse.X * (zoomlevel - 1) + offset.X,mouse.Y * (zoomlevel - 1) + offset.Y,zoomlevel);
-            Font f = new Font("Arial",12);
+            /*Font f = new Font("Arial",12);
             b.Color = Color.FromArgb(255,255,255);
             for(int x = leftedge;x < rightedge;x++)
                 for(int y = topedge;y < bottomedge;y++)
-                    grid[x,y].renderNum(g,grid[x,y].getPower(),x * (zoomlevel - 1) + offset.X,y * (zoomlevel - 1) + offset.Y,zoomlevel);
-            g.DrawString(string.Format("{0}",mouse.X),f,b,new PointF(5,5));*/
+                    grid[x,y].renderNum(g,grid[x,y].getPower(),x * (zoomlevel - 1) + offset.X,y * (zoomlevel - 1) + offset.Y,zoomlevel);/**/
 
         }
 
@@ -182,7 +172,7 @@ namespace Wiring {
                     for(int x = 0;x < components.Count();x++)
                         if(p.X >= components[x].x && p.X < components[x].x + components[x].size.X &&
                             p.Y >= components[x].y && p.Y < components[x].y + components[x].size.Y) {
-                            if(clickType == 0 && components[x].isClickable())
+                            if(clickType == 0 && ComponentTypes.isClickable(components[x].type))
                                 comp = x;
                             else if(clickType == 1) {
                                 components.RemoveAt(x);
@@ -206,7 +196,7 @@ namespace Wiring {
                     grid[p.X,p.Y].type = 1 - (grid[p.X,p.Y].type - 15) + 15;
                 }
                 else if(clickstate == 3) {
-                    if(clickType==0)
+                    if(clickType == 0)
                         components.Add(new Component(width,height,mouse.X,mouse.Y,tempComponent.type,0));
                     tempComponent.type = -1;
                     clickstate = 0;
@@ -247,50 +237,45 @@ namespace Wiring {
         public void evaluatePower() {
             for(int x = 0;x < components.Count();x++) {
                 components[x].clip(grid,width,height);
-                if(components[x].isInput()) {
-                    var outputs = components[x].eval(grid,width,height);
-                    for(int y = 0;y < outputs.Count();y++)
-                        eval(outputs[y].X,outputs[y].Y);
-                }
-                if(components[x].type == 6)
+                if(ComponentTypes.isInput(components[x].type))
                     componentsToCheck.Add(x);
             }
             while(componentsToCheck.Count() > 0) {
                 var outputs = components[componentsToCheck[0]].eval(grid,width,height);
                 for(int x = 0;x < outputs.Count();x++)
-                    eval(outputs[x].X,outputs[x].Y);
+                    eval(outputs[x].X,outputs[x].Y,componentsToCheck[0]);
                 componentsToCheck.RemoveAt(0);
             }
             for(int x = 0;x < components.Count();x++)
-                if(components[x].isOutput())
+                if(ComponentTypes.isOutput(components[x].type))
                     components[x].eval(grid,width,height);
         }
 
-        public void eval(int x,int y) {
+        public void eval(int x,int y,int source) {
             for(int z = 0;z < components.Count();z++)
                 if(x >= components[z].x && x < components[z].x + components[z].size.X &&
                    y >= components[z].y && y < components[z].y + components[z].size.Y &&
-                   !components[z].Touched)
+                   source != z)
                     componentsToCheck.Add(z);
             if(x > 0)
                 if(grid[x,y].canDir(0) && grid[x - 1,y].getPower(2) < grid[x,y].getPower(0)) {
                     grid[x - 1,y].power(0,0,grid[x,y].getPower(0),0);
-                    eval(x - 1,y);
+                    eval(x - 1,y,source);
                 }
             if(y > 0)
                 if(grid[x,y].canDir(1) && grid[x,y - 1].getPower(3) < grid[x,y].getPower(1)) {
                     grid[x,y - 1].power(0,0,0,grid[x,y].getPower(1));
-                    eval(x,y - 1);
+                    eval(x,y - 1,source);
                 }
             if(x < width - 2)
                 if(grid[x,y].canDir(2) && grid[x + 1,y].getPower(0) < grid[x,y].getPower(2)) {
                     grid[x + 1,y].power(grid[x,y].getPower(2),0,0,0);
-                    eval(x + 1,y);
+                    eval(x + 1,y,source);
                 }
             if(y < height - 2)
                 if(grid[x,y].canDir(3) && grid[x,y + 1].getPower(1) < grid[x,y].getPower(3)) {
                     grid[x,y + 1].power(0,grid[x,y].getPower(3),0,0);
-                    eval(x,y + 1);
+                    eval(x,y + 1,source);
                 }
         }
 

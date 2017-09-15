@@ -40,6 +40,8 @@ namespace Wiring {
         #region Power the tile
 
         public void power(double p = 0) {
+            if(p < 0)
+                p = 0;
             if(p > signal)
                 signal = p;
             if(p > signal2)
@@ -232,8 +234,8 @@ namespace Wiring {
         #endregion
 
         public void reset() {
-            signal = 0;
-            signal2 = 0;
+            signal = -1;
+            signal2 = -1;
         }
 
         public void render(Graphics g,int x,int y,int zoomlevel) {
@@ -241,7 +243,7 @@ namespace Wiring {
             g.FillRectangle(b,x,y,zoomlevel,zoomlevel);
             b.Color = Color.FromArgb(0,0,0);
             g.FillRectangle(b,x + 1,y + 1,zoomlevel - 2,zoomlevel - 2);
-            b.Color = Color.FromArgb((int)(Math.Min(Math.Max(baseColor + signal * (255 - baseColor),0),255)),
+            b.Color = Color.FromArgb((int)(baseColor+Math.Min(Math.Max(signal * (255 - baseColor),0),255-baseColor)),
                                      (int)(Math.Min(Math.Max((signal - 1) * 255,0),255)),
                                      (int)(Math.Min(Math.Max((signal - 2) * 255,0),255)));
             switch(type) {
