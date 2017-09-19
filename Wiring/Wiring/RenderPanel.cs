@@ -14,6 +14,7 @@ namespace Wiring {
         private HScrollBar hScrollBar1;
         private Button zoomIn;
         private Button zoomOut;
+        private Button eval;
 
         public RenderPanel(Size sz) {
 
@@ -57,15 +58,22 @@ namespace Wiring {
 
             zoomOut = new Button();
             zoomOut.Text = "-";
-            zoomOut.Size = new Size(40,40);
-            zoomOut.Location = new Point(5,5);
+            zoomOut.Size = new Size(40, 40);
+            zoomOut.Location = new Point(5, 5);
             zoomOut.Click += new EventHandler(zoomout);
+
+            eval = new Button();
+            eval.Text = "Eval";
+            eval.Size = new Size(40, 40);
+            eval.Location = new Point(95, 5);
+            eval.Click += new EventHandler(evaluate);
 
             //Add controls to panel
             Controls.Add(vScrollBar1);
             Controls.Add(hScrollBar1);
             Controls.Add(zoomIn);
             Controls.Add(zoomOut);
+            Controls.Add(eval);
 
             //Start rendering
             st.Start();
@@ -122,8 +130,14 @@ namespace Wiring {
             blueprint.zoomIn();
         }
 
-        private void zoomout(object Sender,EventArgs e) {
+        private void zoomout(object Sender, EventArgs e)
+        {
             blueprint.zoomOut();
+        }
+
+        private void evaluate(object Sender, EventArgs e)
+        {
+            blueprint.evaluate(this);
         }
 
         protected override void WndProc(ref Message m) {
