@@ -17,9 +17,10 @@ namespace Wiring {
         public const int Inverter = 8;
         public const int And = 9;
         public const int Or = 10;
-        public const int Chip = 11;
+        public const int SevSeg = 11;
+        public const int Chip = 12;
 
-        public const int numTypes = 11;
+        public const int numTypes = 12;
 
         public static bool isInput(int type) {
             switch(type) {
@@ -52,7 +53,6 @@ namespace Wiring {
                 case ComponentTypes.And:
                 case ComponentTypes.Toggle:
                 case ComponentTypes.BigToggle:
-                case ComponentTypes.Chip:
                     return true;
                 default:
                     return false;
@@ -110,6 +110,9 @@ namespace Wiring {
                     break;
                 case ComponentTypes.BigToggle:
                     image = "BigToggle";
+                    break;
+                case ComponentTypes.SevSeg:
+                    image = "SevenSegmentDisplay";
                     break;
                 case ComponentTypes.Chip:
                     image = "Chip";
