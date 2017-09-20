@@ -68,7 +68,9 @@ namespace Wiring
             {
                 workbenchComponents.Add(new Component(0, 0, 0, 0, ComponentTypes.Chip));
                 workbenchComponents[workbenchComponents.Count() - 1].Load(chips[x]);
-                workbenchComponents[workbenchComponents.Count() - 1].thisVal = 1;
+                if (workbenchComponents[workbenchComponents.Count()-1].thisVal.Count() == 0)
+                    workbenchComponents[workbenchComponents.Count() - 1].thisVal.Add(0);
+                workbenchComponents[workbenchComponents.Count() - 1].thisVal[0] = 1;
             }
 
             int spacing = 5;
@@ -168,7 +170,7 @@ namespace Wiring
             tempComponent.y = mouse.Y;
             if (tempComponent.type >= 0 && clickstate == 3)
                 tempComponent.render(g, sz, mouse.X * (zoomlevel - 1) + offset.X, mouse.Y * (zoomlevel - 1) + offset.Y, zoomlevel);
-            evaluatePower();
+            evaluatePower(time);
             renderWorkbench(g, sz);
             /*Font f = new Font("Arial",12);
             b.Color = Color.FromArgb(255,255,255);
@@ -302,7 +304,7 @@ namespace Wiring
 
         #region Power evaluation
 
-        public void evaluatePower()
+        public void evaluatePower(long time)
         {
             for (int x = 0; x < components.Count(); x++)
             {
@@ -310,16 +312,28 @@ namespace Wiring
                 if (ComponentTypes.isInput(components[x].type))
                     componentsToCheck.Add(x);
             }
-            while (componentsToCheck.Count() > 0)
+            List<Point3D> outputs = new List<Point3D>();
+            do
             {
-                var outputs = components[componentsToCheck[0]].eval(grid, width, height);
-                for (int x = 0; x < outputs.Count(); x++)
-                    eval(outputs[x].X, outputs[x].Y, componentsToCheck[0]);
-                componentsToCheck.RemoveAt(0);
-            }
+                while (componentsToCheck.Count() > 0)
+                {
+                    var outputBuf = components[componentsToCheck[0]].eval(grid, width, height,time);
+                    while (outputBuf.Count() > 0)
+                    {
+                        outputs.Add(new Point3D(outputBuf[0].X, outputBuf[0].Y, componentsToCheck[0]));
+                        outputBuf.RemoveAt(0);
+                    }
+                    componentsToCheck.RemoveAt(0);
+                }
+                while (outputs.Count() > 0)
+                {
+                    eval(outputs[0].X, outputs[0].Y, outputs[0].Z);
+                    outputs.RemoveAt(0);
+                }
+            } while (componentsToCheck.Count() > 0 || outputs.Count() > 0);
             for (int x = 0; x < components.Count(); x++)
                 if (ComponentTypes.isOutput(components[x].type))
-                    components[x].eval(grid, width, height);
+                    components[x].eval(grid, width, height,time);
         }
 
         public void eval(int x, int y, int source)
@@ -327,7 +341,7 @@ namespace Wiring
             for (int z = 0; z < components.Count(); z++)
                 if (x >= components[z].x && x < components[z].x + components[z].size.X &&
                    y >= components[z].y && y < components[z].y + components[z].size.Y &&
-                   source != z)
+                   source != z && !ComponentTypes.isInput(components[z].type))
                     componentsToCheck.Add(z);
             if (x > 0)
                 if (grid[x, y].canDir(0) && grid[x - 1, y].getPower(2) < grid[x, y].getPower(0))
@@ -443,7 +457,7 @@ namespace Wiring
                             components[newInputIndices[inp][x]].click();
                     }
                 }
-                evaluatePower();
+                evaluatePower(0);
                 int thisOutput = 0;
                 for (int x = 0; x < components.Count(); x++)
                 {
@@ -489,5 +503,15 @@ namespace Wiring
 
         #endregion
 
+    }
+
+    public struct Point3D {
+        public int X, Y, Z;
+        public Point3D(int x, int y, int z)
+        {
+            X = x;
+            Y = y;
+            Z = z;
+        }
     }
 }

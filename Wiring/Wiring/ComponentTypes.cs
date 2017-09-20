@@ -15,12 +15,15 @@ namespace Wiring {
         public const int Lamp2x2 = 6;
         public const int Diode = 7;
         public const int Inverter = 8;
-        public const int And = 9;
-        public const int Or = 10;
-        public const int SevSeg = 11;
-        public const int Chip = 12;
+        public const int RisingEdge = 9;
+        public const int And = 10;
+        public const int Or = 11;
+        public const int XOr = 12;
+        public const int DLatch = 13;
+        public const int SevSeg = 14;
+        public const int Chip = 15;
 
-        public const int numTypes = 12;
+        public const int numTypes = 15;
 
         public static bool isInput(int type) {
             switch(type) {
@@ -53,6 +56,8 @@ namespace Wiring {
                 case ComponentTypes.And:
                 case ComponentTypes.Toggle:
                 case ComponentTypes.BigToggle:
+                case ComponentTypes.XOr:
+                case ComponentTypes.RisingEdge:
                     return true;
                 default:
                     return false;
@@ -65,6 +70,7 @@ namespace Wiring {
                 case ComponentTypes.Power1:
                 case ComponentTypes.Toggle:
                 case ComponentTypes.BigToggle:
+                case ComponentTypes.RisingEdge:
                     return 1;
                 case ComponentTypes.Power2:
                     return 2;
@@ -84,6 +90,9 @@ namespace Wiring {
                 case ComponentTypes.Inverter:
                     image = "Inverter";
                     break;
+                case ComponentTypes.RisingEdge:
+                    image = "RisingEdge";
+                    break;
                 case ComponentTypes.Power1:
                     image = "Power1";
                     break;
@@ -93,11 +102,17 @@ namespace Wiring {
                 case ComponentTypes.Power3:
                     image = "Power3";
                     break;
+                case ComponentTypes.XOr:
+                    image = "XOr";
+                    break;
                 case ComponentTypes.Or:
                     image = "Or";
                     break;
                 case ComponentTypes.And:
                     image = "And";
+                    break;
+                case ComponentTypes.DLatch:
+                    image = "DLatch";
                     break;
                 case ComponentTypes.Lamp1x1:
                     image = "1x1Lamp";
