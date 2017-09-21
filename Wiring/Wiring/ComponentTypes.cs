@@ -139,4 +139,31 @@ namespace Wiring {
         }
 
     }
+
+    public struct Point3FP {
+        public int X, Y, Source;
+        public string Fingerprint;
+        public Point3FP(int x,int y,string fingerprint,int source) {
+            X = x;
+            Y = y;
+            Source = source;
+            Fingerprint = fingerprint;
+        }
+        public Point3FP(PointFP fp,int source) {
+            X = fp.X;
+            Y = fp.Y;
+            Fingerprint = fp.Fingerprint;
+            Source = source;
+        }
+    }
+
+    public struct PointFP {
+        public int X, Y;
+        public string Fingerprint;
+        public PointFP(int x,int y,string fingerprint) {
+            X = x;
+            Y = y;
+            Fingerprint = fingerprint;
+        }
+    }
 }

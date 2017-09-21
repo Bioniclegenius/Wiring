@@ -18,78 +18,159 @@ namespace Wiring {
          * 16: + intersection.
          */
         public int type;
-        public double signal, signal2;
+        public List<string> signal1Fingerprints;
+        public List<string> signal2Fingerprints;
         public static int baseColor = 127;
 
         #region Constructors
 
         public Tile() {
             type = 0;
-            signal = 0;
-            signal2 = 0;
+            signal1Fingerprints = new List<string>();
+            signal2Fingerprints = new List<string>();
         }
 
         public Tile(Tile t) {
             type = t.type;
-            signal = t.signal;
-            signal2 = t.signal2;
+            signal1Fingerprints = new List<string>();
+            for(int x = 0;x < t.signal1Fingerprints.Count();x++)
+                signal1Fingerprints.Add(t.signal1Fingerprints[x]);
+            signal2Fingerprints = new List<string>();
+            for(int x = 0;x < t.signal2Fingerprints.Count();x++)
+                signal2Fingerprints.Add(t.signal2Fingerprints[x]);
         }
 
         #endregion
 
         #region Power the tile
 
-        public void power(double p = 0) {
-            if(p < 0)
-                p = 0;
-            if(p > signal)
-                signal = p;
-            if(p > signal2)
-                signal2 = p;
-
-            if(signal > 3)
-                signal = 3;
-            if(signal2 > 3)
-                signal2 = 3;
+        public void power(List<string> fingerprints,int level = 0) {
+            for(int x = 0;x < fingerprints.Count();x++)
+                power(fingerprints[x],level);
         }
 
-        public void power(double pl = 0,double pu = 0,double pr = 0,double pd = 0) {
+        public void power(string fingerprint,int level = 0) {
+            if(fingerprint != "") {
+                double fpPower = Convert.ToDouble(fingerprint.Substring(40));
+                if(fpPower > 3)
+                    fingerprint = string.Format("{0}{1}",fingerprint.Substring(0,40),3);
+
+                bool contains = false;
+                for(int x = 0;x < signal1Fingerprints.Count();x++)
+                    if(signal1Fingerprints[x].Substring(0,40) == fingerprint.Substring(0,40)) {
+                        signal1Fingerprints[x] = fingerprint;
+                        contains = true;
+                        break;
+                    }
+                if(!contains && level != 2)
+                    signal1Fingerprints.Add(fingerprint);
+                contains = false;
+                for(int x = 0;x < signal2Fingerprints.Count();x++)
+                    if(signal2Fingerprints[x].Substring(0,40) == fingerprint.Substring(0,40)) {
+                        signal2Fingerprints[x] = fingerprint;
+                        contains = true;
+                        break;
+                    }
+                if(!contains && level != 1)
+                    signal2Fingerprints.Add(fingerprint);
+            }
+        }
+
+        public void power(string fpl,string fpu,string fpr,string fpd) {
             var left = new int[] { 1,5,8,9,10,12,13,15 };
             var up = new int[] { 2,5,6,9,10,11,14,15 };
             var right = new int[] { 3,6,7,10,11,12,13,15 };
             var down = new int[] { 4,7,8,9,11,12,14,15 };
-            for(int x = 0;x < 8;x++)
-                if(type == left[x] && pl > signal)
-                    signal = pl;
-            for(int x = 0;x < 8;x++)
-                if(type == up[x] && pu > signal)
-                    signal = pu;
-            for(int x = 0;x < 8;x++)
-                if(type == right[x] && pr > signal)
-                    signal = pr;
-            for(int x = 0;x < 8;x++)
-                if(type == down[x] && pd > signal)
-                    signal = pd;
+            if(fpl != "")
+                for(int x = 0;x < 8;x++)
+                    if(type == left[x])
+                        power(fpl,1);
+            if(fpu != "")
+                for(int x = 0;x < 8;x++)
+                    if(type == up[x])
+                        power(fpu,1);
+            if(fpr != "")
+                for(int x = 0;x < 8;x++)
+                    if(type == right[x])
+                        power(fpr,1);
+            if(fpd != "")
+                for(int x = 0;x < 8;x++)
+                    if(type == down[x])
+                        power(fpd,1);
             if(type == 16) {
-                if(pl > signal)
-                    signal = pl;
-                if(pr > signal)
-                    signal = pr;
-                if(pu > signal2)
-                    signal2 = pu;
-                if(pd > signal2)
-                    signal2 = pd;
+                power(fpl,1);
+                power(fpr,1);
+                power(fpu,2);
+                power(fpd,2);
             }
-
-            if(signal > 3)
-                signal = 3;
-            if(signal2 > 3)
-                signal2 = 3;
         }
 
         #endregion
 
         #region Get power
+
+        public List<string> getPowerLists(int dir) {
+            var left = new int[] { 1,5,8,9,10,12,13,15 };
+            var up = new int[] { 2,5,6,9,10,11,14,15 };
+            var right = new int[] { 3,6,7,10,11,12,13,15 };
+            var down = new int[] { 4,7,8,9,11,12,14,15 };
+            if(dir == 0) {
+                for(int x = 0;x < 8;x++)
+                    if(type == left[x])
+                        return signal1Fingerprints;
+            }
+            if(dir == 1) {
+                for(int x = 0;x < 8;x++)
+                    if(type == up[x])
+                        return signal1Fingerprints;
+            }
+            if(dir == 2) {
+                for(int x = 0;x < 8;x++)
+                    if(type == right[x])
+                        return signal1Fingerprints;
+            }
+            if(dir == 3) {
+                for(int x = 0;x < 8;x++)
+                    if(type == down[x])
+                        return signal1Fingerprints;
+            }
+            if(type == 16) {
+                if(dir == 0 || dir == 2)
+                    return signal1Fingerprints;
+                if(dir == 1 || dir == 3)
+                    return signal2Fingerprints;
+            }
+            return new List<string>();
+        }
+
+        public double getPowerFingerprint(int axis) {
+            double maxPower = -1;
+            if(axis == 1) {
+                for(int x = 0;x < signal2Fingerprints.Count();x++) {
+                    double power = Convert.ToDouble(signal2Fingerprints[x].Substring(40));
+                    if(power > maxPower)
+                        maxPower = power;
+                }
+                return maxPower;
+            }
+            for(int x = 0;x < signal1Fingerprints.Count();x++) {
+                double power = Convert.ToDouble(signal1Fingerprints[x].Substring(40));
+                if(power > maxPower)
+                    maxPower = power;
+            }
+            return maxPower;
+        }
+
+        public bool hasFingerprint(string fingerprint,int axis = 0) {
+            if(axis == 1)
+                for(int x = 0;x < signal2Fingerprints.Count();x++)
+                    if(signal2Fingerprints[x] == fingerprint)
+                        return true;
+            for(int x = 0;x < signal1Fingerprints.Count();x++)
+                if(signal1Fingerprints[x] == fingerprint)
+                    return true;
+            return false;
+        }
 
         /// <summary>
         /// Returns the signal strength of this particular wire.
@@ -104,36 +185,40 @@ namespace Wiring {
             if(dir == 0) {
                 for(int x = 0;x < 8;x++)
                     if(type == left[x])
-                        return signal;
+                        return getPowerFingerprint(0);
             }
             if(dir == 1) {
                 for(int x = 0;x < 8;x++)
                     if(type == up[x])
-                        return signal;
+                        return getPowerFingerprint(0);
             }
             if(dir == 2) {
                 for(int x = 0;x < 8;x++)
                     if(type == right[x])
-                        return signal;
+                        return getPowerFingerprint(0);
             }
             if(dir == 3) {
                 for(int x = 0;x < 8;x++)
                     if(type == down[x])
-                        return signal;
+                        return getPowerFingerprint(0);
             }
             if(type == 16) {
                 if(dir == 0 || dir == 2)
-                    return signal;
+                    return getPowerFingerprint(0);
                 if(dir == 1 || dir == 3)
-                    return signal2;
+                    return getPowerFingerprint(1);
             }
-            return 0;
+            return -1;
         }
 
         public double getPower() {
-            if(signal >= signal2)
-                return signal;
-            return signal2;
+            return Math.Max(getPowerAxis(0),getPowerAxis(1));
+        }
+
+        public double getPowerAxis(int axis) {
+            if(axis == 1)
+                return Math.Max(getPower(1),getPower(3));
+            return Math.Max(getPower(0),getPower(2));
         }
 
         #endregion
@@ -234,8 +319,8 @@ namespace Wiring {
         #endregion
 
         public void reset() {
-            signal = -1;
-            signal2 = -1;
+            signal1Fingerprints = new List<string>();
+            signal2Fingerprints = new List<string>();
         }
 
         public void render(Graphics g,int x,int y,int zoomlevel) {
@@ -243,7 +328,10 @@ namespace Wiring {
             g.FillRectangle(b,x,y,zoomlevel,zoomlevel);
             b.Color = Color.FromArgb(0,0,0);
             g.FillRectangle(b,x + 1,y + 1,zoomlevel - 2,zoomlevel - 2);
-            b.Color = Color.FromArgb((int)(baseColor+Math.Min(Math.Max(signal * (255 - baseColor),0),255-baseColor)),
+            double signal = getPower();
+            if(type == 16)
+                signal = getPowerAxis(0);
+            b.Color = Color.FromArgb((int)(baseColor + Math.Min(Math.Max(signal * (255 - baseColor),0),255 - baseColor)),
                                      (int)(Math.Min(Math.Max((signal - 1) * 255,0),255)),
                                      (int)(Math.Min(Math.Max((signal - 2) * 255,0),255)));
             switch(type) {

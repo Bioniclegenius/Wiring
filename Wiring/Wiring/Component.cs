@@ -42,6 +42,11 @@ namespace Wiring
                 y = 0;
         }
 
+        public string fingerprint(int xout,int yout, double power) {
+            string fp = string.Format("{0}{1}{2}{3}{4}{5}",x.ToString("X8"),y.ToString("X8"),dir.ToString("X8"),xout.ToString("X8"),yout.ToString("X8"),Math.Min(power,3));
+            return fp;
+        }
+
         private void makeSize()
         {
             switch (type)
@@ -120,9 +125,9 @@ namespace Wiring
                 }
         }
 
-        public List<Point> eval(Tile[,] grid, int width, int height, long time)
+        public List<PointFP> eval(Tile[,] grid, int width, int height, long time)
         {
-            List<Point> outputs = new List<Point>();
+            List<PointFP> outputs = new List<PointFP>();
             double val;
             tempVal = 0;
             switch (type)
@@ -133,8 +138,7 @@ namespace Wiring
                 case ComponentTypes.Power1:
                 case ComponentTypes.Power2:
                 case ComponentTypes.Power3:
-                    grid[x, y].power(ComponentTypes.powerOutput(type));
-                    outputs.Add(new Point(x, y));
+                    outputs.Add(new PointFP(x, y,fingerprint(x,y,ComponentTypes.powerOutput(type))));
                     break;
 
                 case ComponentTypes.Toggle:
@@ -143,10 +147,7 @@ namespace Wiring
                         thisVal.Add(0);
                     for (int xx = 0; xx < size.X; xx++)
                         for (int yy = 0; yy < size.Y; yy++)
-                        {
-                            grid[x + xx, y + yy].power(thisVal[0]);
-                            outputs.Add(new Point(x + xx, y + yy));
-                        }
+                            outputs.Add(new PointFP(x + xx, y + yy,fingerprint(x,y,thisVal[0])));
                     break;
 
                 #endregion
@@ -157,20 +158,20 @@ namespace Wiring
                     switch (dir)
                     {
                         case 1://down
-                            grid[x + 1, y + 1].power(Math.Min(grid[x, y].getPower(), grid[x + 1, y].getPower()));
-                            outputs.Add(new Point(x + 1, y + 1));
+                            double power = Math.Min(grid[x,y].getPower(),grid[x + 1,y].getPower());
+                            outputs.Add(new PointFP(x + 1, y + 1,fingerprint(x+1,y+1,power)));
                             break;
                         case 2://left
-                            grid[x, y + 1].power(Math.Min(grid[x + 1, y].getPower(), grid[x + 1, y + 1].getPower()));
-                            outputs.Add(new Point(x, y + 1));
+                            power = Math.Min(grid[x + 1,y].getPower(),grid[x + 1,y + 1].getPower());
+                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,power)));
                             break;
                         case 3://up
-                            grid[x, y].power(Math.Min(grid[x, y + 1].getPower(), grid[x + 1, y + 1].getPower()));
-                            outputs.Add(new Point(x, y));
+                            power = Math.Min(grid[x,y + 1].getPower(),grid[x + 1,y + 1].getPower());
+                            outputs.Add(new PointFP(x, y,fingerprint(x,y,power)));
                             break;
                         default://right
-                            grid[x + 1, y].power(Math.Min(grid[x, y].getPower(), grid[x, y + 1].getPower()));
-                            outputs.Add(new Point(x + 1, y));
+                            power = Math.Min(grid[x,y].getPower(),grid[x,y + 1].getPower());
+                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,power)));
                             break;
                     }
                     break;
@@ -183,20 +184,20 @@ namespace Wiring
                     switch (dir)
                     {
                         case 1://down
-                            grid[x + 1, y + 1].power(Math.Max(grid[x, y].getPower(), grid[x + 1, y].getPower()));
-                            outputs.Add(new Point(x + 1, y + 1));
+                            double power = Math.Max(grid[x,y].getPower(),grid[x + 1,y].getPower());
+                            outputs.Add(new PointFP(x + 1, y + 1,fingerprint(x+1,y+1,power)));
                             break;
                         case 2://left
-                            grid[x, y + 1].power(Math.Max(grid[x + 1, y].getPower(), grid[x + 1, y + 1].getPower()));
-                            outputs.Add(new Point(x, y + 1));
+                            power = Math.Max(grid[x + 1,y].getPower(),grid[x + 1,y + 1].getPower());
+                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,power)));
                             break;
                         case 3://up
-                            grid[x, y].power(Math.Max(grid[x, y + 1].getPower(), grid[x + 1, y + 1].getPower()));
-                            outputs.Add(new Point(x, y));
+                            power = Math.Max(grid[x,y + 1].getPower(),grid[x + 1,y + 1].getPower());
+                            outputs.Add(new PointFP(x, y,fingerprint(x,y,power)));
                             break;
                         default://right
-                            grid[x + 1, y].power(Math.Max(grid[x, y].getPower(), grid[x, y + 1].getPower()));
-                            outputs.Add(new Point(x + 1, y));
+                            power = Math.Max(grid[x,y].getPower(),grid[x,y + 1].getPower());
+                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,power)));
                             break;
                     }
                     break;
@@ -209,20 +210,20 @@ namespace Wiring
                     switch (dir)
                     {
                         case 1://down
-                            grid[x + 1, y + 1].power(Math.Abs(grid[x, y].getPower() - grid[x + 1, y].getPower()));
-                            outputs.Add(new Point(x + 1, y + 1));
+                            double power = Math.Abs(grid[x,y].getPower() - grid[x + 1,y].getPower());
+                            outputs.Add(new PointFP(x + 1, y + 1,fingerprint(x+1,y+1,power)));
                             break;
                         case 2://left
-                            grid[x, y + 1].power(Math.Abs(grid[x + 1, y].getPower() - grid[x + 1, y + 1].getPower()));
-                            outputs.Add(new Point(x, y + 1));
+                            power = Math.Abs(grid[x + 1,y].getPower() - grid[x + 1,y + 1].getPower());
+                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,power)));
                             break;
                         case 3://up
-                            grid[x, y].power(Math.Abs(grid[x, y + 1].getPower() - grid[x + 1, y + 1].getPower()));
-                            outputs.Add(new Point(x, y));
+                            power = Math.Abs(grid[x,y + 1].getPower() - grid[x + 1,y + 1].getPower());
+                            outputs.Add(new PointFP(x, y,fingerprint(x,y,power)));
                             break;
                         default://right
-                            grid[x + 1, y].power(Math.Abs(grid[x, y].getPower() - grid[x, y + 1].getPower()));
-                            outputs.Add(new Point(x + 1, y));
+                            power = Math.Abs(grid[x,y].getPower() - grid[x,y + 1].getPower());
+                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,power)));
                             break;
                     }
                     break;
@@ -234,10 +235,9 @@ namespace Wiring
                 case ComponentTypes.DLatch:
                     if (thisVal.Count() == 0)
                         thisVal.Add(0);
-                    if (grid[x, y + 1].getPower() > 0)
-                        thisVal[0] = grid[x, y].getPower();
-                    grid[x + 1, y].power(thisVal[0]);
-                    outputs.Add(new Point(x + 1, y));
+                    if (grid[x, y].getPower() > 0)
+                        thisVal[0] = grid[x, y+1].getPower();
+                    outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,thisVal[0])));
                     break;
 
                 #endregion
@@ -248,20 +248,20 @@ namespace Wiring
                     switch (dir)
                     {
                         case 1://down
-                            grid[x, y + 1].power(grid[x, y].getPower());
-                            outputs.Add(new Point(x, y + 1));
+                            double power = grid[x,y].getPower();
+                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,power)));
                             break;
                         case 2://left
-                            grid[x, y].power(grid[x + 1, y].getPower());
-                            outputs.Add(new Point(x, y));
+                            power = grid[x + 1,y].getPower();
+                            outputs.Add(new PointFP(x, y,fingerprint(x,y,power)));
                             break;
                         case 3://up
-                            grid[x, y].power(grid[x, y + 1].getPower());
-                            outputs.Add(new Point(x, y));
+                            power = grid[x,y + 1].getPower();
+                            outputs.Add(new PointFP(x, y,fingerprint(x,y,power)));
                             break;
                         default://right
-                            grid[x + 1, y].power(grid[x, y].getPower());
-                            outputs.Add(new Point(x + 1, y));
+                            power = grid[x,y].getPower();
+                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,power)));
                             break;
                     }
                     break;
@@ -274,24 +274,20 @@ namespace Wiring
                     switch (dir)
                     {
                         case 1://down
-                            val = grid[x, y].getPower();
-                            grid[x, y + 1].power(val == 0 ? ComponentTypes.powerOutput(type) : 0);
-                            outputs.Add(new Point(x, y + 1));
+                            val = grid[x, y].getPower()==0?ComponentTypes.powerOutput(type):0;
+                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,val)));
                             break;
                         case 2://left
-                            val = grid[x + 1, y].getPower();
-                            grid[x, y].power(val == 0 ? ComponentTypes.powerOutput(type) : 0);
-                            outputs.Add(new Point(x, y));
+                            val = grid[x + 1, y].getPower()==0?ComponentTypes.powerOutput(type):0;
+                            outputs.Add(new PointFP(x, y,fingerprint(x,y,val)));
                             break;
                         case 3://up
-                            val = grid[x, y + 1].getPower();
-                            grid[x, y].power(val == 0 ? ComponentTypes.powerOutput(type) : 0);
-                            outputs.Add(new Point(x, y));
+                            val = grid[x, y + 1].getPower()==0?ComponentTypes.powerOutput(type):0;
+                            outputs.Add(new PointFP(x, y,fingerprint(x,y,val)));
                             break;
                         default://right
-                            val = grid[x, y].getPower();
-                            grid[x + 1, y].power(val == 0 ? ComponentTypes.powerOutput(type) : 0);
-                            outputs.Add(new Point(x + 1, y));
+                            val = grid[x, y].getPower()==0?ComponentTypes.powerOutput(type):0;
+                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,val)));
                             break;
                     }
                     break;
@@ -309,29 +305,25 @@ namespace Wiring
                             if (grid[x, y].getPower() > thisVal[0])
                                 thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
                             thisVal[0] = grid[x, y].getPower();
-                            grid[x, y + 1].power(thisVal[1]);
-                            outputs.Add(new Point(x, y + 1));
+                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,thisVal[1])));
                             break;
                         case 2://left
                             if (grid[x + 1, y].getPower() > thisVal[0])
                                 thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
                             thisVal[0] = grid[x + 1, y].getPower();
-                            grid[x, y].power(thisVal[1]);
-                            outputs.Add(new Point(x, y));
+                            outputs.Add(new PointFP(x, y,fingerprint(x,y,thisVal[1])));
                             break;
                         case 3://up
                             if (grid[x, y + 1].getPower() > thisVal[0])
                                 thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
                             thisVal[0] = grid[x, y + 1].getPower();
-                            grid[x, y].power(thisVal[1]);
-                            outputs.Add(new Point(x, y));
+                            outputs.Add(new PointFP(x, y,fingerprint(x,y,thisVal[1])));
                             break;
                         default://right
                             if (grid[x, y].getPower() > thisVal[0])
                                 thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
                             thisVal[0] = grid[x, y].getPower();
-                            grid[x + 1, y].power(thisVal[1]);
-                            outputs.Add(new Point(x + 1, y));
+                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,thisVal[1])));
                             break;
                     }
                     break;
@@ -379,8 +371,8 @@ namespace Wiring
                     }
                     for (int yy = 0; yy < truthtable[state].Count(); yy++)
                     {
-                        grid[x + 1, y + yy].power(truthtable[state][yy] == 1 ? maxpower : 0);
-                        outputs.Add(new Point(x + 1, y + yy));
+                        double power = truthtable[state][yy] == 1 ? maxpower : 0;
+                        outputs.Add(new PointFP(x + 1, y + yy,fingerprint(x+1,y+yy,power)));
                     }
                     break;
 
