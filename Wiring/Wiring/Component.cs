@@ -11,6 +11,7 @@ namespace Wiring
     public class Component
     {
         private int dir;
+        private int touched;
         public List<List<int>> truthtable;
         public List<double> sevseginputs;
         public List<double> thisVal;
@@ -26,6 +27,7 @@ namespace Wiring
             type = t;
             tempVal = 0;
             thisVal = new List<double>();
+            touched = 0;
             dir = orientation % 4;//0 = right, 1 = down, 2 = left, 3 = up - in 0, inputs on left, outputs on right
             truthtable = new List<List<int>>();
             sevseginputs = new List<double>();
@@ -42,9 +44,32 @@ namespace Wiring
                 y = 0;
         }
 
-        public string fingerprint(int xout,int yout, double power) {
-            string fp = string.Format("{0}{1}{2}{3}{4}{5}",x.ToString("X8"),y.ToString("X8"),dir.ToString("X8"),xout.ToString("X8"),yout.ToString("X8"),Math.Min(power,3));
+        public string fingerprint(int xout, int yout, double power)
+        {
+            string fp = string.Format("{0}{1}{2}{3}{4}{5}", x.ToString("X8"), y.ToString("X8"), dir.ToString("X8"), xout.ToString("X8"), yout.ToString("X8"), Math.Min(power, 3));
             return fp;
+        }
+
+        private int maxTouched()
+        {
+            if (type == ComponentTypes.Chip)
+                return truthtable.Count() * 2;
+            if (ComponentTypes.isInput(type))
+                return 0;
+            switch (type)
+            {
+                case ComponentTypes.Diode:
+                case ComponentTypes.Inverter:
+                case ComponentTypes.RisingEdge:
+                case ComponentTypes.Lamp1x1:
+                    return 4;
+                case ComponentTypes.Lamp2x2:
+                    return 32;
+                case ComponentTypes.SevSeg:
+                    return 98;
+                default:
+                    return 8;
+            }
         }
 
         private void makeSize()
@@ -111,6 +136,7 @@ namespace Wiring
 
         public void clip(Tile[,] grid, int width, int height)
         {
+            touched = 0;
             for (int xx = 0; xx < size.X; xx++)
                 for (int yy = 0; yy < size.Y; yy++)
                 {
@@ -127,260 +153,292 @@ namespace Wiring
 
         public List<PointFP> eval(Tile[,] grid, int width, int height, long time)
         {
+            touched += 1;
             List<PointFP> outputs = new List<PointFP>();
-            double val;
-            tempVal = 0;
-            switch (type)
+            if (touched <= maxTouched() || ComponentTypes.isInput(type))
             {
+                double val;
+                tempVal = 0;
+                switch (type)
+                {
 
-                #region Power sources
+                    #region Power sources
 
-                case ComponentTypes.Power1:
-                case ComponentTypes.Power2:
-                case ComponentTypes.Power3:
-                    outputs.Add(new PointFP(x, y,fingerprint(x,y,ComponentTypes.powerOutput(type))));
-                    break;
+                    case ComponentTypes.Power1:
+                    case ComponentTypes.Power2:
+                    case ComponentTypes.Power3:
+                        outputs.Add(new PointFP(x, y, fingerprint(x, y, ComponentTypes.powerOutput(type))));
+                        break;
 
-                case ComponentTypes.Toggle:
-                case ComponentTypes.BigToggle:
-                    if (thisVal.Count == 0)
-                        thisVal.Add(0);
-                    for (int xx = 0; xx < size.X; xx++)
-                        for (int yy = 0; yy < size.Y; yy++)
-                            outputs.Add(new PointFP(x + xx, y + yy,fingerprint(x,y,thisVal[0])));
-                    break;
+                    case ComponentTypes.Toggle:
+                    case ComponentTypes.BigToggle:
+                        if (thisVal.Count == 0)
+                            thisVal.Add(0);
+                        for (int xx = 0; xx < size.X; xx++)
+                            for (int yy = 0; yy < size.Y; yy++)
+                                outputs.Add(new PointFP(x + xx, y + yy, fingerprint(x, y, thisVal[0])));
+                        break;
 
-                #endregion
+                    #endregion
 
-                #region And gate
+                    #region And gate
 
-                case ComponentTypes.And:
-                    switch (dir)
-                    {
-                        case 1://down
-                            double power = Math.Min(grid[x,y].getPower(),grid[x + 1,y].getPower());
-                            outputs.Add(new PointFP(x + 1, y + 1,fingerprint(x+1,y+1,power)));
-                            break;
-                        case 2://left
-                            power = Math.Min(grid[x + 1,y].getPower(),grid[x + 1,y + 1].getPower());
-                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,power)));
-                            break;
-                        case 3://up
-                            power = Math.Min(grid[x,y + 1].getPower(),grid[x + 1,y + 1].getPower());
-                            outputs.Add(new PointFP(x, y,fingerprint(x,y,power)));
-                            break;
-                        default://right
-                            power = Math.Min(grid[x,y].getPower(),grid[x,y + 1].getPower());
-                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,power)));
-                            break;
-                    }
-                    break;
+                    case ComponentTypes.And:
+                        switch (dir)
+                        {
+                            case 1://down
+                                double power1 = grid[x, y].getPower();
+                                double power2 = grid[x + 1, y].getPower();
+                                double power = Math.Min(power1, power2);
+                                if (power1 >= 0 && power2 >= 0)
+                                    outputs.Add(new PointFP(x + 1, y + 1, fingerprint(x + 1, y + 1, power)));
+                                break;
+                            case 2://left
+                                power1 = grid[x + 1, y].getPower();
+                                power2 = grid[x + 1, y + 1].getPower();
+                                power = Math.Min(power1, power2);
+                                if (power1 >= 0 && power2 >= 0)
+                                    outputs.Add(new PointFP(x, y + 1, fingerprint(x, y + 1, power)));
+                                break;
+                            case 3://up
+                                power1 = grid[x, y + 1].getPower();
+                                power2 = grid[x + 1, y + 1].getPower();
+                                power = Math.Min(power1, power2);
+                                if (power1 >= 0 && power2 >= 0)
+                                    outputs.Add(new PointFP(x, y, fingerprint(x, y, power)));
+                                break;
+                            default://right
+                                power1 = grid[x, y].getPower();
+                                power2 = grid[x, y + 1].getPower();
+                                power = Math.Min(power1, power2);
+                                if (power1 >= 0 && power2 >= 0)
+                                    outputs.Add(new PointFP(x + 1, y, fingerprint(x + 1, y, power)));
+                                break;
+                        }
+                        break;
 
-                #endregion
+                    #endregion
 
-                #region Or gate
+                    #region Or gate
 
-                case ComponentTypes.Or:
-                    switch (dir)
-                    {
-                        case 1://down
-                            double power = Math.Max(grid[x,y].getPower(),grid[x + 1,y].getPower());
-                            outputs.Add(new PointFP(x + 1, y + 1,fingerprint(x+1,y+1,power)));
-                            break;
-                        case 2://left
-                            power = Math.Max(grid[x + 1,y].getPower(),grid[x + 1,y + 1].getPower());
-                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,power)));
-                            break;
-                        case 3://up
-                            power = Math.Max(grid[x,y + 1].getPower(),grid[x + 1,y + 1].getPower());
-                            outputs.Add(new PointFP(x, y,fingerprint(x,y,power)));
-                            break;
-                        default://right
-                            power = Math.Max(grid[x,y].getPower(),grid[x,y + 1].getPower());
-                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,power)));
-                            break;
-                    }
-                    break;
+                    case ComponentTypes.Or:
+                        switch (dir)
+                        {
+                            case 1://down
+                                double power = Math.Max(grid[x, y].getPower(), grid[x + 1, y].getPower());
+                                outputs.Add(new PointFP(x + 1, y + 1, fingerprint(x + 1, y + 1, power)));
+                                break;
+                            case 2://left
+                                power = Math.Max(grid[x + 1, y].getPower(), grid[x + 1, y + 1].getPower());
+                                outputs.Add(new PointFP(x, y + 1, fingerprint(x, y + 1, power)));
+                                break;
+                            case 3://up
+                                power = Math.Max(grid[x, y + 1].getPower(), grid[x + 1, y + 1].getPower());
+                                outputs.Add(new PointFP(x, y, fingerprint(x, y, power)));
+                                break;
+                            default://right
+                                power = Math.Max(grid[x, y].getPower(), grid[x, y + 1].getPower());
+                                outputs.Add(new PointFP(x + 1, y, fingerprint(x + 1, y, power)));
+                                break;
+                        }
+                        break;
 
-                #endregion
+                    #endregion
 
-                #region XOr gate
+                    #region XOr gate
 
-                case ComponentTypes.XOr:
-                    switch (dir)
-                    {
-                        case 1://down
-                            double power = Math.Abs(grid[x,y].getPower() - grid[x + 1,y].getPower());
-                            outputs.Add(new PointFP(x + 1, y + 1,fingerprint(x+1,y+1,power)));
-                            break;
-                        case 2://left
-                            power = Math.Abs(grid[x + 1,y].getPower() - grid[x + 1,y + 1].getPower());
-                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,power)));
-                            break;
-                        case 3://up
-                            power = Math.Abs(grid[x,y + 1].getPower() - grid[x + 1,y + 1].getPower());
-                            outputs.Add(new PointFP(x, y,fingerprint(x,y,power)));
-                            break;
-                        default://right
-                            power = Math.Abs(grid[x,y].getPower() - grid[x,y + 1].getPower());
-                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,power)));
-                            break;
-                    }
-                    break;
+                    case ComponentTypes.XOr:
+                        switch (dir)
+                        {
+                            case 1://down
+                                double power1 = Math.Max(grid[x, y].getPower(), 0);
+                                double power2 = Math.Max(grid[x + 1, y].getPower(), 0);
+                                double power = Math.Abs(power1 - power2);
+                                outputs.Add(new PointFP(x + 1, y + 1, fingerprint(x + 1, y + 1, power)));
+                                break;
+                            case 2://left
+                                power1 = Math.Max(grid[x + 1, y].getPower(), 0);
+                                power2 = Math.Max(grid[x + 1, y + 1].getPower(), 0);
+                                power = Math.Abs(power1 - power2);
+                                outputs.Add(new PointFP(x, y + 1, fingerprint(x, y + 1, power)));
+                                break;
+                            case 3://up
+                                power1 = Math.Max(grid[x, y + 1].getPower(), 0);
+                                power2 = Math.Max(grid[x + 1, y + 1].getPower(), 0);
+                                power = Math.Abs(power1 - power2);
+                                outputs.Add(new PointFP(x, y, fingerprint(x, y, power)));
+                                break;
+                            default://right
+                                power1 = Math.Max(grid[x, y].getPower(), 0);
+                                power2 = Math.Max(grid[x, y + 1].getPower(), 0);
+                                power = Math.Abs(power1 - power2);
+                                outputs.Add(new PointFP(x + 1, y, fingerprint(x + 1, y, power)));
+                                break;
+                        }
+                        break;
 
-                #endregion
+                    #endregion
 
-                #region D Latch
+                    #region D Latch
 
-                case ComponentTypes.DLatch:
-                    if (thisVal.Count() == 0)
-                        thisVal.Add(0);
-                    if (grid[x, y].getPower() > 0)
-                        thisVal[0] = grid[x, y+1].getPower();
-                    outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,thisVal[0])));
-                    break;
-
-                #endregion
-
-                #region Diode
-
-                case ComponentTypes.Diode:
-                    switch (dir)
-                    {
-                        case 1://down
-                            double power = grid[x,y].getPower();
-                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,power)));
-                            break;
-                        case 2://left
-                            power = grid[x + 1,y].getPower();
-                            outputs.Add(new PointFP(x, y,fingerprint(x,y,power)));
-                            break;
-                        case 3://up
-                            power = grid[x,y + 1].getPower();
-                            outputs.Add(new PointFP(x, y,fingerprint(x,y,power)));
-                            break;
-                        default://right
-                            power = grid[x,y].getPower();
-                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,power)));
-                            break;
-                    }
-                    break;
-
-                #endregion
-
-                #region Inverter
-
-                case ComponentTypes.Inverter:
-                    switch (dir)
-                    {
-                        case 1://down
-                            val = grid[x, y].getPower()==0?ComponentTypes.powerOutput(type):0;
-                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,val)));
-                            break;
-                        case 2://left
-                            val = grid[x + 1, y].getPower()==0?ComponentTypes.powerOutput(type):0;
-                            outputs.Add(new PointFP(x, y,fingerprint(x,y,val)));
-                            break;
-                        case 3://up
-                            val = grid[x, y + 1].getPower()==0?ComponentTypes.powerOutput(type):0;
-                            outputs.Add(new PointFP(x, y,fingerprint(x,y,val)));
-                            break;
-                        default://right
-                            val = grid[x, y].getPower()==0?ComponentTypes.powerOutput(type):0;
-                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,val)));
-                            break;
-                    }
-                    break;
-
-                #endregion
-
-                #region Rising Edge Detector
-
-                case ComponentTypes.RisingEdge:
-                    while (thisVal.Count() < 2)
-                        thisVal.Add(0);
-                    switch (dir)
-                    {
-                        case 1://down
-                            if (grid[x, y].getPower() > thisVal[0])
-                                thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
-                            thisVal[0] = grid[x, y].getPower();
-                            outputs.Add(new PointFP(x, y + 1,fingerprint(x,y+1,thisVal[1])));
-                            break;
-                        case 2://left
-                            if (grid[x + 1, y].getPower() > thisVal[0])
-                                thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
-                            thisVal[0] = grid[x + 1, y].getPower();
-                            outputs.Add(new PointFP(x, y,fingerprint(x,y,thisVal[1])));
-                            break;
-                        case 3://up
-                            if (grid[x, y + 1].getPower() > thisVal[0])
-                                thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
+                    case ComponentTypes.DLatch:
+                        if (thisVal.Count() == 0)
+                            thisVal.Add(0);
+                        if (grid[x, y].getPower() > 0)
                             thisVal[0] = grid[x, y + 1].getPower();
-                            outputs.Add(new PointFP(x, y,fingerprint(x,y,thisVal[1])));
-                            break;
-                        default://right
-                            if (grid[x, y].getPower() > thisVal[0])
-                                thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
-                            thisVal[0] = grid[x, y].getPower();
-                            outputs.Add(new PointFP(x + 1, y,fingerprint(x+1,y,thisVal[1])));
-                            break;
-                    }
-                    break;
+                        outputs.Add(new PointFP(x + 1, y, fingerprint(x + 1, y, thisVal[0])));
+                        break;
 
-                #endregion
+                    #endregion
 
-                #region 1x1 Lamps
+                    #region Diode
 
-                case ComponentTypes.Lamp1x1:
-                    tempVal = grid[x, y].getPower();
-                    break;
+                    case ComponentTypes.Diode:
+                        switch (dir)
+                        {
+                            case 1://down
+                                double power = grid[x, y].getPower();
+                                outputs.Add(new PointFP(x, y + 1, fingerprint(x, y + 1, power)));
+                                break;
+                            case 2://left
+                                power = grid[x + 1, y].getPower();
+                                outputs.Add(new PointFP(x, y, fingerprint(x, y, power)));
+                                break;
+                            case 3://up
+                                power = grid[x, y + 1].getPower();
+                                outputs.Add(new PointFP(x, y, fingerprint(x, y, power)));
+                                break;
+                            default://right
+                                power = grid[x, y].getPower();
+                                outputs.Add(new PointFP(x + 1, y, fingerprint(x + 1, y, power)));
+                                break;
+                        }
+                        break;
 
-                #endregion
+                    #endregion
 
-                #region 2x2 Lamps
+                    #region Inverter
 
-                case ComponentTypes.Lamp2x2:
-                    tempVal = Math.Max(Math.Max(grid[x, y].getPower(), grid[x + 1, y].getPower()),
-                                       Math.Max(grid[x, y + 1].getPower(), grid[x + 1, y + 1].getPower()));
-                    break;
+                    case ComponentTypes.Inverter:
+                        switch (dir)
+                        {
+                            case 1://down
+                                val = grid[x, y].getPower() == 0 ? ComponentTypes.powerOutput(type) : 0;
+                                outputs.Add(new PointFP(x, y + 1, fingerprint(x, y + 1, val)));
+                                break;
+                            case 2://left
+                                val = grid[x + 1, y].getPower() == 0 ? ComponentTypes.powerOutput(type) : 0;
+                                outputs.Add(new PointFP(x, y, fingerprint(x, y, val)));
+                                break;
+                            case 3://up
+                                val = grid[x, y + 1].getPower() == 0 ? ComponentTypes.powerOutput(type) : 0;
+                                outputs.Add(new PointFP(x, y, fingerprint(x, y, val)));
+                                break;
+                            default://right
+                                val = grid[x, y].getPower() == 0 ? ComponentTypes.powerOutput(type) : 0;
+                                outputs.Add(new PointFP(x + 1, y, fingerprint(x + 1, y, val)));
+                                break;
+                        }
+                        break;
 
-                #endregion
+                    #endregion
 
-                #region Seven Segment Displays
+                    #region Rising Edge Detector
 
-                case ComponentTypes.SevSeg:
-                    tempVal = 0;
-                    for (int yy = 0; yy < size.Y; yy++)
-                        sevseginputs[yy] = grid[x, y + yy].getPower();
-                    break;
+                    case ComponentTypes.RisingEdge:
+                        while (thisVal.Count() < 2)
+                            thisVal.Add(0);
+                        switch (dir)
+                        {
+                            case 1://down
+                                if (grid[x, y].getPower() > thisVal[0])
+                                    thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
+                                val = thisVal[0];
+                                thisVal[0] = grid[x, y].getPower();
+                                if(val>=0)
+                                    outputs.Add(new PointFP(x, y + 1, fingerprint(x, y + 1, thisVal[1])));
+                                break;
+                            case 2://left
+                                if (grid[x + 1, y].getPower() > thisVal[0])
+                                    thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
+                                val = thisVal[0];
+                                thisVal[0] = grid[x + 1, y].getPower();
+                                if (val >= 0)
+                                    outputs.Add(new PointFP(x, y, fingerprint(x, y, thisVal[1])));
+                                break;
+                            case 3://up
+                                if (grid[x, y + 1].getPower() > thisVal[0])
+                                    thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
+                                val = thisVal[0];
+                                thisVal[0] = grid[x, y + 1].getPower();
+                                if (val >= 0)
+                                    outputs.Add(new PointFP(x, y, fingerprint(x, y, thisVal[1])));
+                                break;
+                            default://right
+                                if (grid[x, y].getPower() > thisVal[0])
+                                    thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
+                                val = thisVal[0];
+                                thisVal[0] = grid[x, y].getPower();
+                                if (val >= 0)
+                                    outputs.Add(new PointFP(x + 1, y, fingerprint(x + 1, y, thisVal[1])));
+                                break;
+                        }
+                        break;
 
-                #endregion
+                    #endregion
 
-                #region Chip
+                    #region 1x1 Lamps
 
-                case ComponentTypes.Chip:
-                    int state = 0;
-                    double maxpower = 1;
-                    for (int yy = 0; yy < Math.Sqrt(truthtable.Count()); yy++)
-                    {
-                        if (grid[x, y + yy].getPower() > 0)
-                            state += (int)(Math.Pow(2, yy));
-                        if (grid[x, y + yy].getPower() > maxpower)
-                            maxpower = grid[x, y + yy].getPower();
-                    }
-                    for (int yy = 0; yy < truthtable[state].Count(); yy++)
-                    {
-                        double power = truthtable[state][yy] == 1 ? maxpower : 0;
-                        outputs.Add(new PointFP(x + 1, y + yy,fingerprint(x+1,y+yy,power)));
-                    }
-                    break;
+                    case ComponentTypes.Lamp1x1:
+                        tempVal = grid[x, y].getPower();
+                        break;
 
-                #endregion
+                    #endregion
 
-                default:
-                    break;
+                    #region 2x2 Lamps
 
+                    case ComponentTypes.Lamp2x2:
+                        tempVal = Math.Max(Math.Max(grid[x, y].getPower(), grid[x + 1, y].getPower()),
+                                           Math.Max(grid[x, y + 1].getPower(), grid[x + 1, y + 1].getPower()));
+                        break;
+
+                    #endregion
+
+                    #region Seven Segment Displays
+
+                    case ComponentTypes.SevSeg:
+                        tempVal = 0;
+                        for (int yy = 0; yy < size.Y; yy++)
+                            sevseginputs[yy] = grid[x, y + yy].getPower();
+                        break;
+
+                    #endregion
+
+                    #region Chip
+
+                    case ComponentTypes.Chip:
+                        int state = 0;
+                        double maxpower = 1;
+                        for (int yy = 0; yy < Math.Sqrt(truthtable.Count()); yy++)
+                        {
+                            if (grid[x, y + yy].getPower() > 0)
+                                state += (int)(Math.Pow(2, yy));
+                            if (grid[x, y + yy].getPower() > maxpower)
+                                maxpower = grid[x, y + yy].getPower();
+                        }
+                        for (int yy = 0; yy < truthtable[state].Count(); yy++)
+                        {
+                            double power = truthtable[state][yy] == 1 ? maxpower : 0;
+                            outputs.Add(new PointFP(x + 1, y + yy, fingerprint(x + 1, y + yy, power)));
+                        }
+                        break;
+
+                    #endregion
+
+                    default:
+                        break;
+
+                }
             }
             return outputs;
         }
