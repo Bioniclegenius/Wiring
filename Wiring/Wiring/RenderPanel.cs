@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.Timers;
 using System.Windows.Forms;
 
 namespace Wiring {
@@ -15,6 +16,7 @@ namespace Wiring {
         private Button zoomIn;
         private Button zoomOut;
         private Button eval;
+        private System.Timers.Timer timer;
 
         public RenderPanel(Size sz) {
 
@@ -68,6 +70,9 @@ namespace Wiring {
             eval.Location = new Point(95, 5);
             eval.Click += new EventHandler(evaluate);
 
+            timer = new System.Timers.Timer(100);
+            timer.Elapsed += new ElapsedEventHandler(timerTick);
+
             //Add controls to panel
             Controls.Add(vScrollBar1);
             Controls.Add(hScrollBar1);
@@ -76,6 +81,7 @@ namespace Wiring {
             Controls.Add(eval);
 
             //Start rendering
+            timer.Start();
             st.Start();
             Invalidate();
         }
@@ -84,7 +90,8 @@ namespace Wiring {
             Refresh();
         }
 
-        public void paintEvent(object sender,PaintEventArgs e) {
+        public void paintEvent(object sender,PaintEventArgs e)
+        {
             long time = st.ElapsedMilliseconds - lasttime;
             lasttime += time;
             Graphics g = e.Graphics;
@@ -159,6 +166,10 @@ namespace Wiring {
             }
         }
 
+        public void timerTick(object Sender, ElapsedEventArgs e)
+        {
+            blueprint.evaluatePower(500);
+        }
 
     }
 }
