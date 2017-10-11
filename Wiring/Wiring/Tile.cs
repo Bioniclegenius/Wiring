@@ -141,10 +141,11 @@ namespace Wiring
 
         #region Get power
 
-        public UInt32 getStep(string fingerprint)
+        public UInt32 getStep(string fingerprint,int axis=0)
         {
             UInt32 step = 0;
-            UInt32.TryParse(fingerprint.Substring(fingerprintEnd, 8), NumberStyles.HexNumber, CultureInfo.CurrentCulture, out step);
+            string myFingerprint = getFingerprint(fingerprint, axis);
+            UInt32.TryParse(myFingerprint.Substring(fingerprintEnd, 8), NumberStyles.HexNumber, CultureInfo.CurrentCulture, out step);
             return step;
         }
 

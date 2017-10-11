@@ -180,6 +180,7 @@ namespace Wiring
                 g.DrawString(grid[mouse.X, mouse.Y].signal1Fingerprints[x], f, b, new Point(workbenchWidth + 5, top));
                 top += 14;
             }
+            top += 14;
             for (int x = 0; x < grid[mouse.X, mouse.Y].signal2Fingerprints.Count; x++)
             {
                 g.DrawString(grid[mouse.X, mouse.Y].signal2Fingerprints[x], f, b, new Point(workbenchWidth + 5, top));
@@ -400,7 +401,7 @@ namespace Wiring
                    pf.Source != z && !ComponentTypes.isInput(components[z].type))
                     componentsToCheckBuf.Add(z);
             List<string> blanks = new List<string>();
-            pf.Fingerprint = grid[pf.X, pf.Y].getFingerprint(pf.Fingerprint);
+            pf.Fingerprint = grid[pf.X, pf.Y].getFingerprint(pf.Fingerprint,sourceAxis);
             if (grid[pf.X, pf.Y].type != 16 || sourceAxis != 1)
             {
                 if (pf.X > 0)
@@ -451,7 +452,7 @@ namespace Wiring
                     if (!remove)
                     {
                         if (grid[pf.X, pf.Y].canDir(1) &&
-                            (!grid[pf.X, pf.Y - 1].hasFingerprint(pf.Fingerprint, 1) || grid[pf.X, pf.Y - 1].getStep(pf.Fingerprint) < grid[pf.X, pf.Y].getStep(pf.Fingerprint)))
+                            (!grid[pf.X, pf.Y - 1].hasFingerprint(pf.Fingerprint, 1) || grid[pf.X, pf.Y - 1].getStep(pf.Fingerprint,1) < grid[pf.X, pf.Y].getStep(pf.Fingerprint,1)))
                         {
                             grid[pf.X, pf.Y - 1].power("", "", "", pf.Fingerprint, remove);
                             eval(new Point3FP(pf.X, pf.Y - 1, pf.Fingerprint, pf.Source), 1);
@@ -471,7 +472,7 @@ namespace Wiring
                     if (!remove)
                     {
                         if (grid[pf.X, pf.Y].canDir(3) &&
-                            (!grid[pf.X, pf.Y + 1].hasFingerprint(pf.Fingerprint, 1) || grid[pf.X, pf.Y + 1].getStep(pf.Fingerprint) < grid[pf.X, pf.Y].getStep(pf.Fingerprint)))
+                            (!grid[pf.X, pf.Y + 1].hasFingerprint(pf.Fingerprint, 1) || grid[pf.X, pf.Y + 1].getStep(pf.Fingerprint,1) < grid[pf.X, pf.Y].getStep(pf.Fingerprint,1)))
                         {
                             grid[pf.X, pf.Y + 1].power("", pf.Fingerprint, "", "", remove);
                             eval(new Point3FP(pf.X, pf.Y + 1, pf.Fingerprint, pf.Source), 1);
@@ -630,6 +631,8 @@ namespace Wiring
                     grid[x, y].reset();
             componentsToCheck = new List<int>();
             componentsToCheckBuf = new List<int>();
+            for (int x = 0; x < components.Count(); x++)
+                components[x].reset();
         }
 
         #endregion

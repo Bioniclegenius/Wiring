@@ -44,6 +44,16 @@ namespace Wiring
                 y = 0;
         }
 
+        public void reset()
+        {
+            tempVal = 0;
+            thisVal = new List<double>();
+            touched = 0;
+            sevseginputs = new List<double>();
+            for (int x = 0; x < 7; x++)
+                sevseginputs.Add(0);
+        }
+
         public string fingerprint(int xout, int yout, double power)
         {
             string fp = string.Format("{0}{1}{2}{3}{4}{5}{6}", x.ToString("X8"), y.ToString("X8"), dir.ToString("X8"), xout.ToString("X8"), yout.ToString("X8"),"FFFFFFFF", Math.Min(power, 3));
