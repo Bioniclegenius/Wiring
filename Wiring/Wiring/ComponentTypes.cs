@@ -21,9 +21,10 @@ namespace Wiring {
         public const int XOr = 12;
         public const int DLatch = 13;
         public const int SevSeg = 14;
-        public const int Chip = 15;
+        public const int BCDCounter = 15;
+        public const int Chip = 16;
 
-        public const int numTypes = 15;
+        public const int numTypes = 16;
 
         public static bool isInput(int type) {
             switch(type) {
@@ -71,6 +72,7 @@ namespace Wiring {
                 case ComponentTypes.Toggle:
                 case ComponentTypes.BigToggle:
                 case ComponentTypes.RisingEdge:
+                case ComponentTypes.BCDCounter:
                     return 1;
                 case ComponentTypes.Power2:
                     return 2;
@@ -128,6 +130,9 @@ namespace Wiring {
                     break;
                 case ComponentTypes.SevSeg:
                     image = "SevenSegmentDisplay";
+                    break;
+                case ComponentTypes.BCDCounter:
+                    image = "BCDDecoder";
                     break;
                 case ComponentTypes.Chip:
                     image = "Chip";

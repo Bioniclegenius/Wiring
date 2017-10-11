@@ -13,7 +13,6 @@ namespace Wiring
         private int dir;
         private int touched;
         public List<List<int>> truthtable;
-        public List<double> sevseginputs;
         public List<double> thisVal;
         public double tempVal;
         public int type;
@@ -30,9 +29,6 @@ namespace Wiring
             touched = 0;
             dir = orientation % 4;//0 = right, 1 = down, 2 = left, 3 = up - in 0, inputs on left, outputs on right
             truthtable = new List<List<int>>();
-            sevseginputs = new List<double>();
-            for (int x = 0; x < 7; x++)
-                sevseginputs.Add(0);
             makeSize();
             if (x + size.X >= width)
                 x = width - size.X - 1;
@@ -49,14 +45,11 @@ namespace Wiring
             tempVal = 0;
             thisVal = new List<double>();
             touched = 0;
-            sevseginputs = new List<double>();
-            for (int x = 0; x < 7; x++)
-                sevseginputs.Add(0);
         }
 
         public string fingerprint(int xout, int yout, double power)
         {
-            string fp = string.Format("{0}{1}{2}{3}{4}{5}{6}", x.ToString("X8"), y.ToString("X8"), dir.ToString("X8"), xout.ToString("X8"), yout.ToString("X8"),"FFFFFFFF", Math.Min(power, 3));
+            string fp = string.Format("{0}{1}{2}{3}{4}{5}{6}", x.ToString("X8"), y.ToString("X8"), dir.ToString("X8"), xout.ToString("X8"), yout.ToString("X8"), "FFFFFFFF", Math.Min(power, 3));
             return fp;
         }
 
@@ -77,6 +70,8 @@ namespace Wiring
                     return 32;
                 case ComponentTypes.SevSeg:
                     return 98;
+                case ComponentTypes.BCDCounter:
+                    return 100;
                 default:
                     return 8;
             }
@@ -104,6 +99,9 @@ namespace Wiring
                     break;
                 case ComponentTypes.SevSeg:
                     size = new Point(4, 7);
+                    break;
+                case ComponentTypes.BCDCounter:
+                    size = new Point(2, 4);
                     break;
                 default://Anything else
                     size = new Point(1, 1);
@@ -365,7 +363,7 @@ namespace Wiring
                                     thisVal[1] = ComponentTypes.powerOutput(ComponentTypes.RisingEdge) - thisVal[1];
                                 val = thisVal[0];
                                 thisVal[0] = grid[x, y].getPower();
-                                if(val>=0)
+                                if (val >= 0)
                                     outputs.Add(new PointFP(x, y + 1, fingerprint(x, y + 1, thisVal[1])));
                                 break;
                             case 2://left
@@ -418,8 +416,30 @@ namespace Wiring
 
                     case ComponentTypes.SevSeg:
                         tempVal = 0;
+                        while (thisVal.Count() < size.Y)
+                            thisVal.Add(0);
                         for (int yy = 0; yy < size.Y; yy++)
-                            sevseginputs[yy] = grid[x, y + yy].getPower();
+                            thisVal[yy] = grid[x, y + yy].getPower();
+                        break;
+
+                    #endregion
+
+                    #region BCD Counter
+
+                    case ComponentTypes.BCDCounter:
+                        while (thisVal.Count() < 2)
+                            thisVal.Add(0);
+                        if (grid[x, y].getPower() > 0){
+                            thisVal[0] += 1;
+                            thisVal[0] %= 10;
+                            if (thisVal[0] == 0)
+                                thisVal[1] = 1;
+                            else
+                                thisVal[1] = 0;
+                        }
+                        outputs.Add(new PointFP(x, y + 3, fingerprint(x, y + 3, thisVal[1] * ComponentTypes.powerOutput(type))));
+                        for (int z = 0; z < 4; z++)
+                            outputs.Add(new PointFP(x+1, y + z, fingerprint(x+1, y + z, ComponentTypes.powerOutput(type) * Math.Floor(thisVal[0] / Math.Pow(2, z)) % 2)));
                         break;
 
                     #endregion
@@ -480,7 +500,8 @@ namespace Wiring
                     case ComponentTypes.Power1:
                     case ComponentTypes.Power2:
                     case ComponentTypes.Power3:
-                        g.DrawImage(image, new RectangleF(scrx, scry, zoomlevel, zoomlevel));
+                    case ComponentTypes.BCDCounter:
+                        g.DrawImage(image, new RectangleF(scrx, scry, (zoomlevel - 1) * size.X + 1, (zoomlevel - 1) * size.Y + 1));
                         break;
                     case ComponentTypes.And:
                     case ComponentTypes.Or:
@@ -515,6 +536,8 @@ namespace Wiring
                         g.DrawImage(image, new RectangleF(scrx, scry, (zoomlevel - 1) * 2 + 1, (zoomlevel - 1) * 2 + 1), new RectangleF(thisVal[0] == 0 ? 0 : 80, 0, 80, 80), GraphicsUnit.Pixel);
                         break;
                     case ComponentTypes.SevSeg:
+                        while (thisVal.Count() < 7)
+                            thisVal.Add(0);
                         b.Color = Color.FromArgb(0, 0, 0);
                         using (Bitmap i2 = new Bitmap(160, 280))
                         {
@@ -528,13 +551,13 @@ namespace Wiring
                             toDraw.Add(new Rectangle(13, 145, 19, 105));
                             toDraw.Add(new Rectangle(13, 28, 19, 106));
                             toDraw.Add(new Rectangle(28, 130, 104, 19));
-                            for (int xx = 0; xx < 7; xx++)
+                            for (int xx = 0; xx < size.Y; xx++)
                             {
-                                b.Color = Color.FromArgb((int)(Math.Min(Math.Max(Tile.baseColor + sevseginputs[xx] * (255 - Tile.baseColor), 0), 255)),
-                                                         (int)(Math.Min(Math.Max((sevseginputs[xx] - 1) * 255, 0), 255)),
-                                                         (int)(Math.Min(Math.Max((sevseginputs[xx] - 2) * 255, 0), 255)));
-                                if (sevseginputs[xx] > 0)
-                                    g2.FillRectangle(b, toDraw[xx]);
+                                b.Color = Color.FromArgb((int)(Math.Min(Math.Max(Tile.baseColor + thisVal[xx] * (255 - Tile.baseColor), 0), 255)),
+                                                         (int)(Math.Min(Math.Max((thisVal[xx] - 1) * 255, 0), 255)),
+                                                         (int)(Math.Min(Math.Max((thisVal[xx] - 2) * 255, 0), 255)));
+                                if (thisVal[xx] > 0)
+                                    g2.FillRectangle(b, toDraw[xx % 7]);
                             }
                             g2.DrawImage(image, 0, 0);
                             g.DrawImage(i2, new RectangleF(scrx, scry, (zoomlevel - 1) * 4 + 1, (zoomlevel - 1) * 7 + 1));

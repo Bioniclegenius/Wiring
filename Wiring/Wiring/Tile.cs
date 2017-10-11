@@ -137,6 +137,16 @@ namespace Wiring
             }
         }
 
+        private string stepDown(string fingerprint)
+        {
+            UInt32 step = 0;
+            UInt32.TryParse(fingerprint.Substring(fingerprintEnd, 8), NumberStyles.HexNumber, CultureInfo.CurrentCulture, out step);
+            if (step > 0)
+                step--;
+            string fingerprintBuf = string.Format("{0}{1}{2}", fingerprint.Substring(0, fingerprintEnd), step.ToString("X8"), fingerprint.Substring(powerStart));
+            return fingerprintBuf;
+        }
+
         #endregion
 
         #region Get power
@@ -227,13 +237,13 @@ namespace Wiring
 
         public bool hasFingerprintSig(string fingerprint, int axis = 0)
         {
-            if (axis == 1)
-                for (int x = 0; x < signal2Fingerprints.Count(); x++)
-                    if (signal2Fingerprints[x].Substring(0, fingerprintEnd) == fingerprint.Substring(0, fingerprintEnd))
-                        return true;
             for (int x = 0; x < signal1Fingerprints.Count(); x++)
                 if (signal1Fingerprints[x].Substring(0, fingerprintEnd) == fingerprint.Substring(0, fingerprintEnd))
                     return true;
+            if (axis != 0)
+                for (int x = 0; x < signal2Fingerprints.Count(); x++)
+                    if (signal2Fingerprints[x].Substring(0, fingerprintEnd) == fingerprint.Substring(0, fingerprintEnd))
+                        return true;
             return false;
         }
 
@@ -304,15 +314,6 @@ namespace Wiring
             if (axis == 1)
                 return Math.Max(getPower(1), getPower(3));
             return Math.Max(getPower(0), getPower(2));
-        }
-
-        private string stepDown(string fingerprint)
-        {
-            UInt32 step = getStep(fingerprint);
-            if (step > 0)
-                step--;
-            string fingerprintBuf = string.Format("{0}{1}{2}", fingerprint.Substring(0, fingerprintEnd), step.ToString("X8"), fingerprint.Substring(powerStart));
-            return fingerprintBuf;
         }
 
         #endregion
