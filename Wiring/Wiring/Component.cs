@@ -427,16 +427,19 @@ namespace Wiring
                     #region BCD Counter
 
                     case ComponentTypes.BCDCounter:
-                        while (thisVal.Count() < 2)
+                        while (thisVal.Count() < 3)
                             thisVal.Add(0);
-                        if (grid[x, y].getPower() > 0){
+                        if (grid[x, y].getPower() > 0 && thisVal[2] == 0){
                             thisVal[0] += 1;
                             thisVal[0] %= 10;
                             if (thisVal[0] == 0)
                                 thisVal[1] = 1;
                             else
                                 thisVal[1] = 0;
+                            thisVal[2] = grid[x,y].getPower();
                         }
+                        if (grid[x, y].getPower() <= thisVal[2])
+                            thisVal[2] = 0;
                         outputs.Add(new PointFP(x, y + 3, fingerprint(x, y + 3, thisVal[1] * ComponentTypes.powerOutput(type))));
                         for (int z = 0; z < 4; z++)
                             outputs.Add(new PointFP(x+1, y + z, fingerprint(x+1, y + z, ComponentTypes.powerOutput(type) * Math.Floor(thisVal[0] / Math.Pow(2, z)) % 2)));
