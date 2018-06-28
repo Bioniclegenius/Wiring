@@ -438,7 +438,7 @@ namespace Wiring
                                 thisVal[1] = 0;
                             thisVal[2] = grid[x,y].getPower();
                         }
-                        if (grid[x, y].getPower() <= thisVal[2])
+                        if (grid[x, y].getPower() < thisVal[2] || grid[x,y + 1].getPower() > 0)
                             thisVal[2] = 0;
                         outputs.Add(new PointFP(x, y + 3, fingerprint(x, y + 3, thisVal[1] * ComponentTypes.powerOutput(type))));
                         for (int z = 0; z < 4; z++)
